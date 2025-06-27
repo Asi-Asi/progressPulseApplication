@@ -1,5 +1,4 @@
 import { Text, View } from "react-native";
-import "nativewind";
 
 export default function Index() {
   return (
