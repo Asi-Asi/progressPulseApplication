@@ -11,14 +11,15 @@ export default function Login() {
   return (
     <View  className="flex-1 justify-center items-center bg-[#1E1E1E] px-6">
       <Stack.Screen name='Login' options={{  title: 'Login ',
-    headerStyle: {
-      backgroundColor: '#1E1E1E' // צבע הרקע של הסרגל העליון
-    },
-    headerTintColor: '#FFD100', // צבע הטקסט וכפתורי חזור
-    headerTitleStyle: {
-      fontWeight: 'bold',
-      fontSize: 26, // גודל הטקסט של הכותרת
-    } }} />
+        headerStyle: {
+        backgroundColor: '#1E1E1E' // צבע הרקע של הסרגל העליון
+        },
+        headerTintColor: '#FFD100', // צבע הטקסט וכפתורי חזור
+        headerTitleStyle: {
+        fontWeight: 'bold',
+        fontSize: 26, // גודל הטקסט של הכותרת
+        } }}
+      />
       {/* כותרת */}
       <LoginHeader/>
 
