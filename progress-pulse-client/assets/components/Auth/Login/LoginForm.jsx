@@ -1,6 +1,6 @@
 import { TextInput, TouchableOpacity, Text} from 'react-native';
 
-export default function LoginForm() {
+export default function  LoginForm() {
   return (
     <>
         {/* שדה אימייל */}

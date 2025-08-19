@@ -1,0 +1,26 @@
+// Fetch all users
+GET  http://localhost:5500/api/users
+###
+
+
+
+//adding a new user
+POST  http://localhost:5500/api/users/register
+Content-Type: application/json
+
+{
+  "name": "zeko",
+  "email": "zeko@example.com",
+  "password": "securepassword"
+}
+###
+
+POST  http://localhost:5500/api/users/login
+Content-Type: application/json
+
+{
+  "email": "zeko@example.com",
+  "password": "securepassword"
+}
+
+###
