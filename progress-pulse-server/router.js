@@ -9,16 +9,16 @@ const router = Router();
 router.use('/users', usersRouter);
 
 
-router.get('/', (req, res) => res.send('API is running. Try /api/health'));
+// router.get('/', (req, res) => res.send('API is running. Try /api/health'));
 
-router.get('/health', (req, res) => {
-  res.status(200).json({
-    ok: true,
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'production'
-  });
-});
+// router.get('/health', (req, res) => {
+//   res.status(200).json({
+//     ok: true,
+//     uptime: process.uptime(),
+//     timestamp: new Date().toISOString(),
+//     env: process.env.NODE_ENV || 'production'
+//   });
+// });
 
 
 export default router;
