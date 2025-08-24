@@ -15,8 +15,10 @@ server.use(cors());
 //לאפשר קליטת נתונים מגוף הבקשה
 server.use(express.json({ extended: true, limit: '50mb' }));
 
-//microservice routes
+
+//routes
 server.use('/api', router);
+
 
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
