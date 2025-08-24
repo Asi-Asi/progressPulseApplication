@@ -27,7 +27,7 @@ export async function addUser(req, res) {
 }
 
 
-export async function login(req, res) {
+export async function   login(req, res) {
 
     try {
         const {email, password} = req.body;
