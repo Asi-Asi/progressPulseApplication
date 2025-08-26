@@ -12,7 +12,7 @@ function toYMD(d) {
   return `${y}-${m}-${day}`;
 }
 
-function normalizeBirthDate(bd) {
+function normalizeBirthDate(bd) { 
   if (!bd) return null;
   if (bd instanceof Date && !isNaN(bd)) return toYMD(bd);
   if (typeof bd === 'string') {
