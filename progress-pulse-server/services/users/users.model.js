@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { createUser, getAll, getByEmail  } from "./users.db.js";
+import { createUser, getAll, getByEmail, deleteById } from "./users.db.js";
 import { formatInTimeZone } from 'date-fns-tz';                             
 
 
@@ -27,16 +27,17 @@ function toLocal(d) {
 }
 
 export default class User{
-    constructor({ firstName, lastName, name, birthDate, sex, phone, email, password }) {
-        this.firstName = firstName?.trim() || '';
-        this.lastName  = lastName?.trim()  || '';
-        this.fullName      = (name?.trim() || `${this.firstName} ${this.lastName}`).trim(); 
-        this.birthDate = normalizeBirthDate(birthDate);
-        this.sex       = sex || '';                              
-        this.phone     = phone?.trim() || '';
-        this.email     = email?.trim().toLowerCase();            
-        this.password  = bcrypt.hashSync(password, 15);          
-        this.createdAt = toLocal(new Date());
+    constructor({ firstName, lastName, name, birthDate, sex, phone, email, password, roleLevel }) {
+    this.firstName = firstName?.trim() || '';
+    this.lastName  = lastName?.trim()  || '';
+    this.fullName  = (name?.trim() || `${this.firstName} ${this.lastName}`).trim();
+    this.birthDate = normalizeBirthDate(birthDate);
+    this.sex       = sex || '';
+    this.phone     = phone?.trim() || '';
+    this.email     = email?.trim().toLowerCase();
+    this.password  = bcrypt.hashSync(password, 10); // 10 מספיק ומהיר
+    this.roleLevel = roleLevel ?? 'USER';
+    this.createdAt = toLocal(new Date());
     }
 
     static async getAllUsers() {

@@ -1,6 +1,8 @@
 import User  from "./users.model.js";
 import bcrypt from 'bcrypt';
 import { Roles } from '../auth/roles.js';
+import { signAccessToken } from '../auth/auth.tokens.js';
+
 
 
 
@@ -76,7 +78,7 @@ export async function   login(req, res) {
 
 export async function deleteUserById(req, res) {
   try {
-    
+
     const { id } = req.params;                          
     const result = await User.deleteById(id);
     if (result.deletedCount === 0) return res.status(404).json({ message: 'User not found' });
