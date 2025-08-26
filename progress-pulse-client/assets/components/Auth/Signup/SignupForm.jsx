@@ -19,11 +19,20 @@ export default function SignupForm({ onSubmit }) {
   const [showPicker, setShowPicker] = useState(false);     // פתיחת בורר תאריך
   const [sex, setSex]               = useState('');        // 'male' | 'female'
   const [phone, setPhone]           = useState('');        // טלפון
-  const [email, setEmail]           = useState('');        // אימייל
-  const [password, setPassword]     = useState('');        // סיסמה
+  const [email, setEmail]           = useState('');        // אימייל  
+  const [password, setPassword]     = useState('');        // סיסמה 
   const [loading, setLoading]       = useState(false);     // מצב טעינה
 
   const alertFn = Platform.OS === 'web' ? window.alert : Alert.alert;
+
+
+  function toYMD(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
 
   async function handleSubmit() {
     // ולידציה בסיסית
@@ -39,20 +48,12 @@ export default function SignupForm({ onSubmit }) {
     try {
       setLoading(true);
 
-      // const payload = {
-      //   firstName: firstName.trim(),           // ניקוי רווחים
-      //   lastName : lastName.trim(),
-      //   birthDate: birthDate.toISOString(),    // ISO לנוחות בשרת/DB
-      //   sex,
-      //   phone    : phone.trim(),
-      //   email    : email.trim().toLowerCase(),
-      //   password,
-      // };
+      
       const payload = {
         name: `${firstName} ${lastName}`.trim(),   // ← add this
         firstName: firstName.trim(),
         lastName : lastName.trim(),
-        birthDate: birthDate.toISOString(),
+        birthDate: toYMD(birthDate), 
         sex,
         phone    : phone.trim(),
         email    : email.trim().toLowerCase(),

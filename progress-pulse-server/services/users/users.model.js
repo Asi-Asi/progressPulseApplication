@@ -1,12 +1,42 @@
 import bcrypt from 'bcrypt';
 import { createUser, getAll, getByEmail  } from "./users.db.js";
+import { formatInTimeZone } from 'date-fns-tz';                             
 
+
+
+// helpers functions
+function toYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function normalizeBirthDate(bd) {
+  if (!bd) return null;
+  if (bd instanceof Date && !isNaN(bd)) return toYMD(bd);
+  if (typeof bd === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(bd)) return bd;     // כבר בפורמט נכון
+    const d = new Date(bd);
+    if (!isNaN(d)) return toYMD(d);
+  }
+  return null;
+}
+function toLocal(d) {
+  return formatInTimeZone(d, 'Asia/Jerusalem', 'yyyy-MM-dd HH:mm:ss');
+}
 
 export default class User{
-    constructor({name, email, password }){
-        this.name = name;
-        this.email = email;
-        this.password = bcrypt.hashSync(password, 15); // Hashing the password
+    constructor({ firstName, lastName, name, birthDate, sex, phone, email, password }) {
+        this.firstName = firstName?.trim() || '';
+        this.lastName  = lastName?.trim()  || '';
+        this.fullName      = (name?.trim() || `${this.firstName} ${this.lastName}`).trim(); // שם מלא
+        this.birthDate = normalizeBirthDate(birthDate);
+        this.sex       = sex || '';                              // 'male' | 'female'
+        this.phone     = phone?.trim() || '';
+        this.email     = email?.trim().toLowerCase();            // אימייל תמיד lowercase
+        this.password  = bcrypt.hashSync(password, 15);          // האשינג בצד השרת
+        this.createdAt = toLocal(new Date());
     }
 
     static async getAllUsers() {
