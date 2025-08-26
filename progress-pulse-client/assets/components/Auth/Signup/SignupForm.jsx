@@ -3,25 +3,29 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-// כתובת השרת – כמו ב-LoginForm
-const PC_LAN_IP = '192.168.137.1'; // לשימוש במכשיר אמיתי על אותה רשת
-const BASE_URL = Platform.select({
-  web:     'http://localhost:5500',     // browser / Expo web
-  ios:     'http://localhost:5500',     // iOS simulator
-  android: 'http://10.0.2.2:5500',      // Android emulator
-  default: `http://${PC_LAN_IP}:5500`,  // real phone on Wi‑Fi
+const PROD_URL = 'https://progresspulseapplication.onrender.com';
+const DEV_URL  = Platform.select({
+  web:     'http://localhost:5500',
+  ios:     'http://localhost:5500',
+  android: 'http://10.0.2.2:5500',
+  default: 'http://192.168.137.1:5500',
 });
 
-export default function SignupForm({ onSubmit }) {
-  const [firstName, setFirstName]   = useState('');        // שם פרטי
-  const [lastName, setLastName]     = useState('');        // שם משפחה
-  const [birthDate, setBirthDate]   = useState(new Date());// תאריך לידה
-  const [showPicker, setShowPicker] = useState(false);     // פתיחת בורר תאריך
-  const [sex, setSex]               = useState('');        // 'male' | 'female'
-  const [phone, setPhone]           = useState('');        // טלפון
-  const [email, setEmail]           = useState('');        // אימייל  
-  const [password, setPassword]     = useState('');        // סיסמה 
-  const [loading, setLoading]       = useState(false);     // מצב טעינה
+// החלף ל-true כשאתה רוצה לעבוד מול Render
+const USE_PROD = true;
+
+const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
+
+export default function   SignupForm({ onSubmit }) {
+  const [firstName, setFirstName]   = useState('');       
+  const [lastName, setLastName]     = useState('');        
+  const [birthDate, setBirthDate]   = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);     
+  const [sex, setSex]               = useState('');        
+  const [phone, setPhone]           = useState('');        
+  const [email, setEmail]           = useState('');        
+  const [password, setPassword]     = useState('');        
+  const [loading, setLoading]       = useState(false);     
 
   const alertFn = Platform.OS === 'web' ? window.alert : Alert.alert;
 

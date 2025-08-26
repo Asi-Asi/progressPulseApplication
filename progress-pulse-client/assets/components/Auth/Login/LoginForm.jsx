@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { TextInput, TouchableOpacity, Text, Alert, Platform, View, ActivityIndicator } from 'react-native';
 // import { router } from 'expo-router'; // ← if you want to navigate after success
 
-// If you later test on a real phone, set your PC IPv4 here (e.g., 192.168.1.15)
-const PC_LAN_IP = '192.168.137.1';
-
-const BASE_URL = Platform.select({
-  web:     'http://localhost:5500',       // browser / Expo web
-  ios:     'http://localhost:5500',       // iOS simulator
-  android: 'http://10.0.2.2:5500',        // Android emulator
-  default: `http://${PC_LAN_IP}:5500`,    // real phone on Wi-Fi
+const PROD_URL = 'https://progresspulseapplication.onrender.com';
+const DEV_URL  = Platform.select({
+  web:     'http://localhost:5500',
+  ios:     'http://localhost:5500',
+  android: 'http://10.0.2.2:5500',
+  default: 'http://192.168.137.1:5500',
 });
+
+const USE_PROD = true;
+
+const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
 
 export default function LoginForm() {
   const [email, setEmail]       = useState('');

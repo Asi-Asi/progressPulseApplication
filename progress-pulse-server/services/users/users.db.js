@@ -50,7 +50,7 @@ export async function getByEmail(email) {
   try {
     client = await MongoClient.connect(process.env.CONNECTION_STRING);
     const db = client.db(process.env.DB_NAME);
-    const user = await db.collection('Users').findOne({ email }); // חיפוש לפי מייל
+    const user = await db.collection('Users').findOne({ email }); 
     return user;
   } catch (error) {
     console.error('Error fetching user by email:', error);
@@ -67,7 +67,7 @@ export async function deleteById(id) {
   try {
     client = await MongoClient.connect(process.env.CONNECTION_STRING);
     const db = client.db(process.env.DB_NAME);
-    return await db.collection('Users').deleteOne({ _id: new ObjectId(id) }); // delete by _id
+    return await db.collection('Users').deleteOne({ _id: new ObjectId(id) }); 
   } catch (error) {
     console.error('Error deleting user by id:', error);
     throw error;
