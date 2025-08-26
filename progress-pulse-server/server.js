@@ -11,7 +11,6 @@ const server = express();
 
 //לאפשר גישה לשרת מכתובת אחרת
 server.use(cors()); 
-server.options('*', cors());
 //aaa 
 
 //לאפשר קליטת נתונים מגוף הבקשה
