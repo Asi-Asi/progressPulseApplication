@@ -19,6 +19,14 @@ export async function getAllUsers(req, res) {
 
 export async function addUser(req, res) {
     try {
+        const { email } = req.body;
+
+        // בדיקה אם כבר קיים משתמש עם אותו מייל
+        const existing = await User.findByEmail(email);
+        if (existing) {
+            return res.status(409).json({ message: 'Email already in use' });
+        }
+
         const user = new User(req.body);
         const result = await user.save();
         res.status(201).json({ user: result });

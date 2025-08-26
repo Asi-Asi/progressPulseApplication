@@ -3,10 +3,16 @@ import { createUser, getAll, getByEmail,updateById,deleteById  } from "./users.d
 
 
 export default class User{
-    constructor({name, email, password }){
-        this.name = name;
-        this.email = email;
-        this.password = bcrypt.hashSync(password, 15); // Hashing the password
+    constructor({ firstName, lastName, name, birthDate, sex, phone, email, password }) {
+        this.firstName = firstName?.trim() || '';
+        this.lastName  = lastName?.trim()  || '';
+        this.fullName      = (name?.trim() || `${this.firstName} ${this.lastName}`).trim(); // שם מלא
+        this.birthDate = normalizeBirthDate(birthDate);
+        this.sex       = sex || '';                              // 'male' | 'female'
+        this.phone     = phone?.trim() || '';
+        this.email     = email?.trim().toLowerCase();            // אימייל תמיד lowercase
+        this.password  = bcrypt.hashSync(password, 15);          // האשינג בצד השרת
+        this.createdAt = toLocal(new Date());
     }
 
     static async getAllUsers() {

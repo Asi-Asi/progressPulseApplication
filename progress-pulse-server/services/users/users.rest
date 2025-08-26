@@ -1,5 +1,5 @@
 // Fetch all users
-GET  http://localhost:5500/api/users
+GET  https://progresspulseapplication.onrender.com/api/users
 ###
 
 

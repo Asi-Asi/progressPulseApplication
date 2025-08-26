@@ -1,0 +1,13 @@
+# node
+**/node_modules/
+
+# env files anywhere
+.env
+.env.*
+*.env
+**/.env
+**/.env.*
+
+# builds
+**/dist/
+**/build/

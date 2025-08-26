@@ -1,13 +1,19 @@
 import {Router} from 'express';
-// import authRouter from './services/auth/auth.router.js';
-// import uploadRouter from './services/upload/upload.router.js';
 import usersRouter from './services/users/users.routes.js';
+// import musclesRouter from './services/muscles/muscles.routes.js';
+// import exercisesRouter from './services/exercises/exercises.routes.js';
 
 const router = Router();
 
-// router.use('/auth', authRouter);
 // router.use('/upload', uploadRouter);
+
 router.use('/users', usersRouter);
+
+// router.use('/muscles', musclesRouter);
+
+// router.use('/exercises', exercisesRouter);
+
+
 
 
 export default router;
