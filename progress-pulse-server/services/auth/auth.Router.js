@@ -1,4 +1,4 @@
-import Router from 'express';
+import { Router } from 'express';
 import { login, register } from './auth.controller.js';
 import { upload } from '../../globals.js';
 const authRouter = Router();

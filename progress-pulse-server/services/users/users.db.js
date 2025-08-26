@@ -60,6 +60,22 @@ export async function getByEmail(email) {
   }
 }
 
+export async function updateById(id, data) {
+  let client = null;
+  try {
+    client = await MongoClient.connect(process.env.CONNECTION_STRING);
+    const db = client.db(process.env.DB_NAME);
+    return await db.collection('Users').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: data }
+    );
+  } catch (error) {
+    console.error('Error updating user by id:', error);
+    throw error;
+  } finally {
+    if (client) client.close();
+  }
+}
 
 
 export async function deleteById(id) {

@@ -83,30 +83,41 @@
 
 
 // app/(screens)/Signup.jsx
-import { View } from 'react-native';
-import { Stack } from 'expo-router';
+import React from "react";
+import { ScrollView, View } from "react-native";
+import { Stack } from "expo-router";
 
-import SignupHeader from '../../assets/components/Auth/Signup/SignupHeader';  // כותרת
-import SignupForm   from '../../assets/components/Auth/Signup/SignupForm';    // טופס
-import SignupFooter from '../../assets/components/Auth/Signup/SignupFooter';  // תחתית
+import SignupHeader from "../../assets/components/Auth/Signup/SignupHeader";
+import SignupForm from "../../assets/components/Auth/Signup/SignupForm";
+import SignupFooter from "../../assets/components/Auth/Signup/SignupFooter";
 
 export default function Signup() {
   return (
-    <View className="flex-1 justify-center items-center bg-darkBg px-6">
-      {/* קונפיגורציית ההדר למסך הזה */}
+    <ScrollView contentContainerStyle={{ flexGrow: 1, backgroundColor: "#1E1E1E" }}>
       <Stack.Screen
         options={{
-          title: 'Sign Up ',                          // טייטל
-          headerStyle: { backgroundColor: '#1E1E1E' },// רקע סרגל עליון
-          headerTintColor: '#FFD100',                 // צבע טקסט/אייקונים
-          headerTitleStyle: { fontWeight: 'bold', fontSize: 26 }, // גודל/משקל
+          title: "Login", // keep header style identical to login
+          headerStyle: { backgroundColor: "#1E1E1E" },
+          headerTintColor: "#FFD100",
+          headerTitleStyle: { fontWeight: "bold", fontSize: 26 },
         }}
       />
-
-      <SignupHeader />  {/* כותרת בתוך הדף אם רוצים בנוסף לכותרת הסרגל */}
-      <SignupForm />    {/* הטופס */}
-      <SignupFooter />  {/* קישורים/ניווט */}
-    </View>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          gap: 24,
+          paddingHorizontal: 24,
+          paddingVertical: 32,
+          backgroundColor: "#1E1E1E",
+        }}
+      >
+        <SignupHeader />
+        <SignupForm />
+        <SignupFooter />
+      </View>
+    </ScrollView>
   );
 }
+
 

@@ -1,80 +1,119 @@
-// assets/components/Auth/Signup/SignupForm.jsx
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React, { useState } from "react";
+import { View, TextInput, TouchableOpacity, Text, Alert, Platform } from "react-native";
+import { useRouter } from "expo-router";
 
-export default function SignupForm({ onSubmit }) {
-  const [firstName, setFirstName] = useState('');        // שם פרטי
-  const [lastName, setLastName]   = useState('');        // שם משפחה
-  const [birthDate, setBirthDate] = useState(new Date());// תאריך לידה
-  const [showPicker, setShowPicker] = useState(false);   // הצגת בורר תאריך
-  const [country, setCountry]     = useState('');        // מדינה
-  const [phone, setPhone]         = useState('');        // טלפון
-  const [email, setEmail]         = useState('');        // אימייל
+const API_HOST =
+  process.env.EXPO_PUBLIC_API_BASE ||
+  (Platform.OS === "android"
+    ? "http://10.0.2.2:5500"
+    : Platform.OS === "ios"
+    ? "http://127.0.0.1:5500"
+    : "http://localhost:5500");
 
-  const handleSubmit = () => {
-    onSubmit?.({ firstName, lastName, birthDate, country, phone, email }); // קריאה חיצונית אם צריך
-    // TODO: ולידציה/שליחה לשרת
+export default function SignupForm() {
+  const router = useRouter();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName]   = useState("");
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [loading, setLoading]     = useState(false);
+
+  const handleSignup = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
+      return;
+    }
+    if ((password || "").length < 6) {
+      Alert.alert("Weak password", "Password must be at least 6 characters.");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_HOST}/api/users/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${firstName} ${lastName}`.trim(),
+          email,
+          password,
+        }),
+      });
+      const data = await res.json();
+      setLoading(false);
+
+      if (res.status === 201) {
+        Alert.alert("Success", "Registration successful! You can log in now.");
+        // Optional: router.push("/");
+      } else if (res.status === 409) {
+        Alert.alert("Email already registered", "Try logging in instead.");
+      } else {
+        Alert.alert("Signup failed", data?.message || "Please check your details.");
+      }
+    } catch (e) {
+      setLoading(false);
+      console.error("Signup error:", e);
+      Alert.alert("Error", "Unable to reach the server.");
+    }
+  };
+
+  const field = {
+    backgroundColor: "#2B2B2B",
+    color: "#FFFFFF",
+    borderRadius: 10,
+    height: 48,
+    paddingHorizontal: 14,
+    marginBottom: 14,
   };
 
   return (
-    <View className="w-full">
+    <View style={{ width: "100%" }}>
+      {/* Keep only the fields you need visually; styling matches Login */}
       <TextInput
-        value={firstName} onChangeText={setFirstName}
-        placeholder="First Name" placeholderTextColor="#AAAAAA"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
+        style={field}
+        placeholder="First name"
+        placeholderTextColor="#9CA3AF"
+        value={firstName}
+        onChangeText={setFirstName}
       />
-
       <TextInput
-        value={lastName} onChangeText={setLastName}
-        placeholder="Last Name" placeholderTextColor="#AAAAAA"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
+        style={field}
+        placeholder="Last name"
+        placeholderTextColor="#9CA3AF"
+        value={lastName}
+        onChangeText={setLastName}
+      />
+      <TextInput
+        style={field}
+        placeholder="Email"
+        placeholderTextColor="#9CA3AF"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={field}
+        placeholder="Password"
+        placeholderTextColor="#9CA3AF"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
       />
 
       <TouchableOpacity
-        onPress={() => setShowPicker(true)}
-        className="bg-secondaryBg p-4 rounded-xl mb-4"
+        onPress={handleSignup}
+        disabled={loading}
+        style={{
+          backgroundColor: "#FF5A2C",
+          height: 50,
+          borderRadius: 10,
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: 8,
+          opacity: loading ? 0.6 : 1,
+        }}
       >
-        <Text className="text-lightGray">{birthDate.toDateString()}</Text>
-      </TouchableOpacity>
-
-      {showPicker && (
-        <DateTimePicker
-          value={birthDate}
-          mode="date"
-          display="default"
-          maximumDate={new Date()}
-          onChange={(event, selectedDate) => {
-            setShowPicker(false);
-            if (selectedDate) setBirthDate(selectedDate);
-          }}
-        />
-      )}
-
-      <TextInput
-        value={country} onChangeText={setCountry}
-        placeholder="Country" placeholderTextColor="#AAAAAA"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
-      />
-
-      <TextInput
-        value={phone} onChangeText={setPhone}
-        placeholder="Phone Number" placeholderTextColor="#AAAAAA"
-        keyboardType="phone-pad"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
-      />
-
-      <TextInput
-        value={email} onChangeText={setEmail}
-        placeholder="Email" placeholderTextColor="#AAAAAA"
-        keyboardType="email-address"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-6"
-      />
-
-      <TouchableOpacity onPress={handleSubmit} className="bg-action p-4 rounded-xl">
-        <Text className="text-primaryText text-center font-bold text-base">
-          Create Account
-        </Text>
+        <Text style={{ color: "#fff", fontWeight: "700" }}>Create Account</Text>
       </TouchableOpacity>
     </View>
   );
