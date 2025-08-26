@@ -24,24 +24,25 @@ export async function getAll(){
 
 // Create a new user
 export async function createUser(user) {
-    let client = null;
-    try
-    {
-        client = await MongoClient.connect(process.env.CONNECTION_STRING);
-        const db = client.db(process.env.DB_NAME);
-        const result = await db.collection('Users').insertOne(user);
-        return result;
+  let client = null;
+  try {
+    client = await MongoClient.connect(process.env.CONNECTION_STRING);
+    const db = client.db(process.env.DB_NAME);
+    const result = await db.collection('Users').insertOne(user);
+
+    // החזר את המסמך שנשמר + ה-_id החדש
+    return { ...user, _id: result.insertedId };
+  } catch (error) {
+    // אם יש אינדקס ייחודי על email, תתפוס 11000 ל-409 יפה
+    if (error?.code === 11000) {
+      error.status = 409;
+      error.clientMessage = 'Email already in use';
     }
-    catch (error) {
-        console.error('Error creating user:', error);
-        throw error;
-    }
-    
-    finally {
-        if (client) {
-            client.close();
-        }
-    }
+    console.error('Error creating user:', error);
+    throw error;
+  } finally {
+    if (client) client.close();
+  }
 }
 
 // Get a user by email --> Login
