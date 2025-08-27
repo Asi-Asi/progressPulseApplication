@@ -149,7 +149,7 @@ export default function   SignupForm({ onSubmit }) {
           disabled={loading}
         >
           {sex === 'male' && (
-            <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#FFD100]" />
+          <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#FFD100]" />
           )}
           <Text className={`font-bold ${sex === 'male' ? 'text-[#FFD100]' : 'text-primaryText'}`}>
             Male

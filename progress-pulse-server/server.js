@@ -11,7 +11,6 @@ const server = express();
 
 //לאפשר גישה לשרת מכתובת אחרת
 server.use(cors()); 
-//aaa 
 
 //לאפשר קליטת נתונים מגוף הבקשה
 server.use(express.json({ extended: true, limit: '50mb' }));
