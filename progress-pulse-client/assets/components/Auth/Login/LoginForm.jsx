@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { TextInput, TouchableOpacity, Text, Alert, Platform, View, ActivityIndicator } from 'react-native';
+import { TextInput, TouchableOpacity, Text, Alert, Platform } from 'react-native';  
 // import { router } from 'expo-router'; // ← if you want to navigate after success
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 
 const PROD_URL = 'https://progresspulseapplication.onrender.com';
 const DEV_URL  = Platform.select({
@@ -22,42 +24,48 @@ export default function LoginForm() {
 
 
   const handleLogin = async () => {
-        if (!email || !password) {
-          Alert.alert("Error", "Please fill in both fields");
-          return;
-        }
-        try {
-          setLoading(true);
-          const response = await fetch(`${API_HOST}/api/users/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-          });
-          const data = await response.json();
-          setLoading(false);
-    
-          if (!response.ok) {
-            Alert.alert("Login Failed", data?.message || "Invalid credentials");
-            return;
-          }
-    
-          // Trust the server: use the role it returns
-          await AsyncStorage.setItem("token", data.token ?? "");
-          await AsyncStorage.setItem("role", data.role ?? "");
-    
-          if (data.role === "admin") {
-            Alert.alert("Welcome Admin!", "Redirecting to admin dashboard...");
-            router.push("/AdminPage");
-          } else {
-            Alert.alert("Login Successful!", `Welcome, ${data.user?.name || "User"}!`);
-            router.push("/MainPage");
-          }
-        } catch (error) {
-          setLoading(false);
-          Alert.alert("Error", "Something went wrong. Please try again later.");
-          console.error(error);
-        }
-      };
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in both fields");
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await fetch(`${BASE_URL}/api/users/login`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+      email: email.trim().toLowerCase(), 
+      password
+      }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        Alert.alert('Login Failed', data?.message || 'Invalid credentials');
+        return;
+      }
+
+      await AsyncStorage.multiSet([
+        ['token', data.token ?? ''],
+        ['role',  data.role  ?? ''],
+      ]);
+
+      // נווט לפי תפקיד
+      if (data.role === 'admin') {
+        Alert.alert('Welcome Admin!', 'Redirecting to admin dashboard…');
+        router.replace('/AdminPage'); 
+      } else {
+        Alert.alert('Login Successful!', `Welcome, ${data.user?.name || 'User'}!`);
+        router.replace('/MainPage');   
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Something went wrong. Please try again later.');
+    } finally {
+      setLoading(false); 
+    }
+  };
 
 
   

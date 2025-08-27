@@ -91,28 +91,7 @@ export default function   SignupForm({ onSubmit }) {
         className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
       />
 
-      {/* Birth Date */}
-      <TouchableOpacity
-        onPress={() => setShowPicker(true)}
-        className="bg-secondaryBg p-4 rounded-xl mb-4"
-        disabled={loading}
-      >
-        <Text className="text-lightGray">{birthDate.toDateString()}</Text>
-      </TouchableOpacity>
-
-      {showPicker && (
-        <DateTimePicker
-          value={birthDate}
-          mode="date"
-          display="default"
-          maximumDate={new Date()}
-          onChange={(event, selectedDate) => {
-            setShowPicker(false);
-            if (selectedDate) setBirthDate(selectedDate);  // עדכון תאריך אם נבחר
-          }}
-        />
-      )}
-
+      
       {/* Sex (Male/Female) */}
       <View className="flex-row gap-3 mb-4">
         {/* Male */}
