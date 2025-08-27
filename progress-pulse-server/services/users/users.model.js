@@ -54,6 +54,9 @@ export default class User{
     catch (error) { console.error('Error fetching user by email:', error); throw error; }
     }
 
+    static async updateById(id, data) {
+        return await updateById(id, data);
+      }
 
     static async deleteById(id) {
          return await deleteById(id);

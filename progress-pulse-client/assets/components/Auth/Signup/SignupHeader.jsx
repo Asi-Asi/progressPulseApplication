@@ -1,9 +1,13 @@
-// assets/components/Auth/Signup/SignupHeader.jsx
-import { Text } from 'react-native';
+import React from "react";
+import { View, Text } from "react-native";
+
 export default function SignupHeader() {
   return (
-    <Text className="text-highlight text-2xl font-bold text-center mb-8">
-      Sign Up
-    </Text>
+    <View style={{ alignItems: "center", marginBottom: 8 }}>
+      {/* same headline as Login */}
+      <Text style={{ color: "#FFD100", fontSize: 28, fontWeight: "800" }}>
+        Progress Pulse
+      </Text>
+    </View>
   );
 }

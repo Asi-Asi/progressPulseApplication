@@ -27,84 +27,63 @@ export default function   SignupForm({ onSubmit }) {
   const [password, setPassword]     = useState('');        
   const [loading, setLoading]       = useState(false);     
 
-  const alertFn = Platform.OS === 'web' ? window.alert : Alert.alert;
-
-
-  function toYMD(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-
-
-  async function handleSubmit() {
-    // ולידציה בסיסית
-    if (!firstName || !lastName || !email || !password) {
-      alertFn('Missing info', 'Please fill first name, last name, email and password.');
+  const handleSignup = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
       return;
     }
-    if (!sex) {
-      alertFn('Missing info', 'Please choose Male or Female.');
+    if ((password || "").length < 6) {
+      Alert.alert("Weak password", "Password must be at least 6 characters.");
       return;
     }
-
     try {
       setLoading(true);
-
-      
-      const payload = {
-        name: `${firstName} ${lastName}`.trim(),   // ← add this
-        firstName: firstName.trim(),
-        lastName : lastName.trim(),
-        birthDate: toYMD(birthDate), 
-        sex,
-        phone    : phone.trim(),
-        email    : email.trim().toLowerCase(),
-        password,
-      };
-
-      // נתיב השרת — עדכן אם אצלך זה /api/users
-      const res = await fetch(`${BASE_URL}/api/users/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body  : JSON.stringify(payload),
+      const res = await fetch(`${API_HOST}/api/users/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${firstName} ${lastName}`.trim(),
+          email,
+          password,
+        }),
       });
-
-      const ct   = res.headers.get('content-type') || '';
-      const body = ct.includes('application/json') ? await res.json() : await res.text();
-
-      if (!res.ok) {
-        const msg = typeof body === 'object' ? body?.message : body;
-        throw new Error(msg || `HTTP ${res.status}`);
-      }
-
-      const okMsg = typeof body === 'object' ? (body.message || 'Account created successfully') : 'Account created successfully';
-      alertFn('Success', okMsg);
-
-      // קריאה חיצונית אם ההורה צריך לדעת שנרשם
-      onSubmit?.(payload);
-
-      // איפוס שדות רגישים (אופציונלי)
-      setPassword('');
-    } catch (e) {
-      alertFn('Signup failed', String(e.message));
-    } finally {
+      const data = await res.json();
       setLoading(false);
+
+      if (res.status === 201) {
+        Alert.alert("Success", "Registration successful! You can log in now.");
+        // Optional: router.push("/");
+      } else if (res.status === 409) {
+        Alert.alert("Email already registered", "Try logging in instead.");
+      } else {
+        Alert.alert("Signup failed", data?.message || "Please check your details.");
+      }
+    } catch (e) {
+      setLoading(false);
+      console.error("Signup error:", e);
+      Alert.alert("Error", "Unable to reach the server.");
     }
-  }
+  };
+
+  const field = {
+    backgroundColor: "#2B2B2B",
+    color: "#FFFFFF",
+    borderRadius: 10,
+    height: 48,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  };
 
   return (
-    <View className="w-full">
-      {/* First Name */}
+    <View style={{ width: "100%" }}>
+      {/* Keep only the fields you need visually; styling matches Login */}
       <TextInput
-        value={firstName} onChangeText={setFirstName}
-        placeholder="First Name" placeholderTextColor="#AAAAAA"
-        autoCapitalize="words" textContentType="givenName"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
+        style={field}
+        placeholder="First name"
+        placeholderTextColor="#9CA3AF"
+        value={firstName}
+        onChangeText={setFirstName}
       />
-
-      {/* Last Name */}
       <TextInput
         value={lastName} onChangeText={setLastName}
         placeholder="Last Name" placeholderTextColor="#AAAAAA"
@@ -179,42 +158,39 @@ export default function   SignupForm({ onSubmit }) {
 
       {/* Phone */}
       <TextInput
-        value={phone} onChangeText={setPhone}
-        placeholder="Phone Number" placeholderTextColor="#AAAAAA"
-        keyboardType="phone-pad" textContentType="telephoneNumber"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
-        editable={!loading}
+        style={field}
+        placeholder="Email"
+        placeholderTextColor="#9CA3AF"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
       />
-
-      {/* Email */}
       <TextInput
-        value={email} onChangeText={setEmail}
-        placeholder="Email" placeholderTextColor="#AAAAAA"
-        keyboardType="email-address" autoCapitalize="none" textContentType="emailAddress"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
-        editable={!loading}
+        style={field}
+        placeholder="Password"
+        placeholderTextColor="#9CA3AF"
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
       />
 
-      {/* Password */}
-      <TextInput
-        value={password} onChangeText={setPassword}
-        placeholder="Password" placeholderTextColor="#AAAAAA"
-        secureTextEntry autoCapitalize="none" textContentType="password"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-6"
-        editable={!loading}
-      />
-
-      {/* Submit */}
       <TouchableOpacity
-        onPress={handleSubmit}
-        className="bg-action p-4 rounded-xl"
+        onPress={handleSignup}
         disabled={loading}
+        style={{
+          backgroundColor: "#FF5A2C",
+          height: 50,
+          borderRadius: 10,
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: 8,
+          opacity: loading ? 0.6 : 1,
+        }}
       >
-        <Text className="text-primaryText text-center font-bold text-base">
-          {loading ? 'Creating Account…' : 'Create Account'}
-        </Text>
-        {loading ? <ActivityIndicator style={{ marginTop: 10 }} /> : null}
+        <Text style={{ color: "#fff", fontWeight: "700" }}>Create Account</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
