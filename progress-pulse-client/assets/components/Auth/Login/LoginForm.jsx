@@ -1,14 +1,18 @@
-import { useState } from "react";
-import { TextInput, TouchableOpacity, Text, Alert, Platform } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useState } from 'react';
+import { TextInput, TouchableOpacity, Text, Alert, Platform, View, ActivityIndicator } from 'react-native';
+// import { router } from 'expo-router'; // ← if you want to navigate after success
 
-const API_HOST =
-  Platform.OS === "android" ? "http://10.0.2.2:5500" :
-  Platform.OS === "ios"     ? "http://127.0.0.1:5500" :
-                               "http://localhost:5500";
+const PROD_URL = 'https://progresspulseapplication.onrender.com';
+const DEV_URL  = Platform.select({
+  web:     'http://localhost:5500',
+  ios:     'http://localhost:5500',
+  android: 'http://10.0.2.2:5500',
+  default: 'http://192.168.137.1:5500',
+});
 
+const USE_PROD = true;
 
+const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
 
 export default function LoginForm() {
   const router = useRouter();

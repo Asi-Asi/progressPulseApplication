@@ -1,22 +1,31 @@
-import React, { useState } from "react";
-import { View, TextInput, TouchableOpacity, Text, Alert, Platform } from "react-native";
-import { useRouter } from "expo-router";
+// assets/components/Auth/Signup/SignupForm.jsx
+import { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-const API_HOST =
-  process.env.EXPO_PUBLIC_API_BASE ||
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:5500"
-    : Platform.OS === "ios"
-    ? "http://127.0.0.1:5500"
-    : "http://localhost:5500");
+const PROD_URL = 'https://progresspulseapplication.onrender.com';
+const DEV_URL  = Platform.select({
+  web:     'http://localhost:5500',
+  ios:     'http://localhost:5500',
+  android: 'http://10.0.2.2:5500',
+  default: 'http://192.168.137.1:5500',
+});
 
-export default function SignupForm() {
-  const router = useRouter();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName]   = useState("");
-  const [email, setEmail]         = useState("");
-  const [password, setPassword]   = useState("");
-  const [loading, setLoading]     = useState(false);
+// החלף ל-true כשאתה רוצה לעבוד מול Render
+const USE_PROD = true;
+
+const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
+
+export default function   SignupForm({ onSubmit }) {
+  const [firstName, setFirstName]   = useState('');       
+  const [lastName, setLastName]     = useState('');        
+  const [birthDate, setBirthDate]   = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);     
+  const [sex, setSex]               = useState('');        
+  const [phone, setPhone]           = useState('');        
+  const [email, setEmail]           = useState('');        
+  const [password, setPassword]     = useState('');        
+  const [loading, setLoading]       = useState(false);     
 
   const handleSignup = async () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -76,12 +85,78 @@ export default function SignupForm() {
         onChangeText={setFirstName}
       />
       <TextInput
-        style={field}
-        placeholder="Last name"
-        placeholderTextColor="#9CA3AF"
-        value={lastName}
-        onChangeText={setLastName}
+        value={lastName} onChangeText={setLastName}
+        placeholder="Last Name" placeholderTextColor="#AAAAAA"
+        autoCapitalize="words" textContentType="familyName"
+        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
       />
+
+      {/* Birth Date */}
+      <TouchableOpacity
+        onPress={() => setShowPicker(true)}
+        className="bg-secondaryBg p-4 rounded-xl mb-4"
+        disabled={loading}
+      >
+        <Text className="text-lightGray">{birthDate.toDateString()}</Text>
+      </TouchableOpacity>
+
+      {showPicker && (
+        <DateTimePicker
+          value={birthDate}
+          mode="date"
+          display="default"
+          maximumDate={new Date()}
+          onChange={(event, selectedDate) => {
+            setShowPicker(false);
+            if (selectedDate) setBirthDate(selectedDate);  // עדכון תאריך אם נבחר
+          }}
+        />
+      )}
+
+      {/* Sex (Male/Female) */}
+      <View className="flex-row gap-3 mb-4">
+        {/* Male */}
+        <TouchableOpacity
+          onPress={() => setSex('male')}
+          activeOpacity={0.9}
+          accessibilityRole="button"
+          accessibilityState={{ selected: sex === 'male' }}
+          className={`relative flex-1 items-center justify-center p-4 rounded-2xl border
+            ${sex === 'male'
+              ? 'bg-secondaryBg border-[#FFD100] shadow-2xl'
+              : 'bg-secondaryBg border-[#333533] opacity-80'}`}
+          disabled={loading}
+        >
+          {sex === 'male' && (
+          <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#FFD100]" />
+          )}
+          <Text className={`font-bold ${sex === 'male' ? 'text-[#FFD100]' : 'text-primaryText'}`}>
+            Male
+          </Text>
+        </TouchableOpacity>
+
+        {/* Female */}
+        <TouchableOpacity
+          onPress={() => setSex('female')}
+          activeOpacity={0.9}
+          accessibilityRole="button"
+          accessibilityState={{ selected: sex === 'female' }}
+          className={`relative flex-1 items-center justify-center p-4 rounded-2xl border
+            ${sex === 'female'
+              ? 'bg-secondaryBg border-[#FFD100] shadow-2xl'
+              : 'bg-secondaryBg border-[#333533] opacity-80'}`}
+          disabled={loading}
+        >
+          {sex === 'female' && (
+            <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#FFD100]" />
+          )}
+          <Text className={`font-bold ${sex === 'female' ? 'text-[#FFD100]' : 'text-primaryText'}`}>
+            Female
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Phone */}
       <TextInput
         style={field}
         placeholder="Email"

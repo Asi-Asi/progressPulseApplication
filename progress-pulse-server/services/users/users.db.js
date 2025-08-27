@@ -24,24 +24,25 @@ export async function getAll(){
 
 // Create a new user
 export async function createUser(user) {
-    let client = null;
-    try
-    {
-        client = await MongoClient.connect(process.env.CONNECTION_STRING);
-        const db = client.db(process.env.DB_NAME);
-        const result = await db.collection('Users').insertOne(user);
-        return result;
+  let client = null;
+  try {
+    client = await MongoClient.connect(process.env.CONNECTION_STRING);
+    const db = client.db(process.env.DB_NAME);
+    const result = await db.collection('Users').insertOne(user);
+
+    // החזר את המסמך שנשמר + ה-_id החדש
+    return { ...user, _id: result.insertedId };
+  } catch (error) {
+    // אם יש אינדקס ייחודי על email, תתפוס 11000 ל-409 יפה
+    if (error?.code === 11000) {
+      error.status = 409;
+      error.clientMessage = 'Email already in use';
     }
-    catch (error) {
-        console.error('Error creating user:', error);
-        throw error;
-    }
-    
-    finally {
-        if (client) {
-            client.close();
-        }
-    }
+    console.error('Error creating user:', error);
+    throw error;
+  } finally {
+    if (client) client.close();
+  }
 }
 
 // Get a user by email --> Login
@@ -50,7 +51,7 @@ export async function getByEmail(email) {
   try {
     client = await MongoClient.connect(process.env.CONNECTION_STRING);
     const db = client.db(process.env.DB_NAME);
-    const user = await db.collection('Users').findOne({ email }); // חיפוש לפי מייל
+    const user = await db.collection('Users').findOne({ email }); 
     return user;
   } catch (error) {
     console.error('Error fetching user by email:', error);
@@ -83,7 +84,7 @@ export async function deleteById(id) {
   try {
     client = await MongoClient.connect(process.env.CONNECTION_STRING);
     const db = client.db(process.env.DB_NAME);
-    return await db.collection('Users').deleteOne({ _id: new ObjectId(id) }); // delete by _id
+    return await db.collection('Users').deleteOne({ _id: new ObjectId(id) }); 
   } catch (error) {
     console.error('Error deleting user by id:', error);
     throw error;
