@@ -1,7 +1,5 @@
-// assets/components/Auth/Signup/SignupForm.jsx
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 const PROD_URL = 'https://progresspulseapplication.onrender.com';
 const DEV_URL  = Platform.select({
@@ -18,72 +16,81 @@ const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
 
 export default function   SignupForm({ onSubmit }) {
   const [firstName, setFirstName]   = useState('');       
-  const [lastName, setLastName]     = useState('');        
-  const [birthDate, setBirthDate]   = useState(new Date());
-  const [showPicker, setShowPicker] = useState(false);     
+  const [lastName, setLastName]     = useState('');          
   const [sex, setSex]               = useState('');        
-  const [phone, setPhone]           = useState('');        
   const [email, setEmail]           = useState('');        
   const [password, setPassword]     = useState('');        
   const [loading, setLoading]       = useState(false);     
 
-  const handleSignup = async () => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Alert.alert("Invalid email", "Please enter a valid email address.");
+  const alertFn = Platform.OS === 'web' ? window.alert : Alert.alert;
+
+
+
+  async function handleSubmit() {
+    // ולידציה בסיסית
+    if (!firstName || !lastName || !email || !password) {
+      alertFn('Missing info', 'Please fill first name, last name, email and password.');
       return;
     }
-    if ((password || "").length < 6) {
-      Alert.alert("Weak password", "Password must be at least 6 characters.");
+    if (!sex) {
+      alertFn('Missing info', 'Please choose Male or Female.');
       return;
     }
+
     try {
       setLoading(true);
-      const res = await fetch(`${API_HOST}/api/users/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: `${firstName} ${lastName}`.trim(),
-          email,
-          password,
-        }),
+
+
+      const payload = {
+        name: `${firstName} ${lastName}`.trim(),   // ← add this
+        firstName: firstName.trim(),
+        lastName : lastName.trim(),
+        sex,
+        email    : email.trim().toLowerCase(),
+        password,
+      };
+
+      // נתיב השרת — עדכן אם אצלך זה /api/users
+      const res = await fetch(`${BASE_URL}/api/users/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body  : JSON.stringify(payload),
       });
-      const data = await res.json();
-      setLoading(false);
 
-      if (res.status === 201) {
-        Alert.alert("Success", "Registration successful! You can log in now.");
-        // Optional: router.push("/");
-      } else if (res.status === 409) {
-        Alert.alert("Email already registered", "Try logging in instead.");
-      } else {
-        Alert.alert("Signup failed", data?.message || "Please check your details.");
+      const ct   = res.headers.get('content-type') || '';
+      const body = ct.includes('application/json') ? await res.json() : await res.text();
+
+      if (!res.ok) {
+        const msg = typeof body === 'object' ? body?.message : body;
+        throw new Error(msg || `HTTP ${res.status}`);
       }
-    } catch (e) {
-      setLoading(false);
-      console.error("Signup error:", e);
-      Alert.alert("Error", "Unable to reach the server.");
-    }
-  };
 
-  const field = {
-    backgroundColor: "#2B2B2B",
-    color: "#FFFFFF",
-    borderRadius: 10,
-    height: 48,
-    paddingHorizontal: 14,
-    marginBottom: 14,
-  };
+      const okMsg = typeof body === 'object' ? (body.message || 'Account created successfully') : 'Account created successfully';
+      alertFn('Success', okMsg);
+
+      // קריאה חיצונית אם ההורה צריך לדעת שנרשם
+      onSubmit?.(payload);
+
+      // איפוס שדות רגישים (אופציונלי)
+      setPassword('');
+    } catch (e) {
+      alertFn('Signup failed', String(e.message));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <View style={{ width: "100%" }}>
-      {/* Keep only the fields you need visually; styling matches Login */}
+    <View className="w-full">
+      {/* First Name */}
       <TextInput
-        style={field}
-        placeholder="First name"
-        placeholderTextColor="#9CA3AF"
-        value={firstName}
-        onChangeText={setFirstName}
+        value={firstName} onChangeText={setFirstName}
+        placeholder="First Name" placeholderTextColor="#AAAAAA"
+        autoCapitalize="words" textContentType="givenName"
+        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
       />
+
+      {/* Last Name */}
       <TextInput
         value={lastName} onChangeText={setLastName}
         placeholder="Last Name" placeholderTextColor="#AAAAAA"
@@ -91,7 +98,7 @@ export default function   SignupForm({ onSubmit }) {
         className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
       />
 
-      
+     
       {/* Sex (Male/Female) */}
       <View className="flex-row gap-3 mb-4">
         {/* Male */}
@@ -107,7 +114,7 @@ export default function   SignupForm({ onSubmit }) {
           disabled={loading}
         >
           {sex === 'male' && (
-          <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#FFD100]" />
+            <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#FFD100]" />
           )}
           <Text className={`font-bold ${sex === 'male' ? 'text-[#FFD100]' : 'text-primaryText'}`}>
             Male
@@ -135,41 +142,35 @@ export default function   SignupForm({ onSubmit }) {
         </TouchableOpacity>
       </View>
 
-      {/* Phone */}
+      {/* Email */}
       <TextInput
-        style={field}
-        placeholder="Email"
-        placeholderTextColor="#9CA3AF"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={field}
-        placeholder="Password"
-        placeholderTextColor="#9CA3AF"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
+        value={email} onChangeText={setEmail}
+        placeholder="Email" placeholderTextColor="#AAAAAA"
+        keyboardType="email-address" autoCapitalize="none" textContentType="emailAddress"
+        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
+        editable={!loading}
       />
 
+      {/* Password */}
+      <TextInput
+        value={password} onChangeText={setPassword}
+        placeholder="Password" placeholderTextColor="#AAAAAA"
+        secureTextEntry autoCapitalize="none" textContentType="password"
+        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-6"
+        editable={!loading}
+      />
+
+      {/* Submit */}
       <TouchableOpacity
-        onPress={handleSignup}
+        onPress={handleSubmit}
+        className="bg-action p-4 rounded-xl"
         disabled={loading}
-        style={{
-          backgroundColor: "#FF5A2C",
-          height: 50,
-          borderRadius: 10,
-          alignItems: "center",
-          justifyContent: "center",
-          marginTop: 8,
-          opacity: loading ? 0.6 : 1,
-        }}
       >
-        <Text style={{ color: "#fff", fontWeight: "700" }}>Create Account</Text>
+        <Text className="text-primaryText text-center font-bold text-base">
+          {loading ? 'Creating Account…' : 'Create Account'}
+        </Text>
+        {loading ? <ActivityIndicator style={{ marginTop: 10 }} /> : null}
       </TouchableOpacity>
     </View>
   );
 }
-
