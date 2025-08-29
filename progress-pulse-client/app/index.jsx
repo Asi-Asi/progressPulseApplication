@@ -4,10 +4,14 @@ import { View, Text,  TextInput, TouchableOpacity } from 'react-native';
 import LoginHeader from '../assets/components/Auth/Login/LoginHeader';
 import LoginForm from '../assets/components/Auth/Login/LoginForm';
 import LoginFooter from '../assets/components/Auth/Login/LoginFooter';
-import { Stack } from 'expo-router';
+import { Stack, useRouter} from 'expo-router';
+
+
 
 
 export default function Login() {
+  const router = useRouter();
+
   return (
     <View  className="flex-1 justify-center items-center bg-[#1E1E1E] px-6">
       <Stack.Screen name='Login' options={{  title: 'Login ',
@@ -25,9 +29,14 @@ export default function Login() {
 
       {/*שדות הטופס*/}
       <LoginForm/>  
+      
 
-      {/* לינק להרשמה */}
+
+      <TouchableOpacity onPress={() => router.push('/categories/MusclesCategoryScreen')}>
+        <Text>Go to Muscles Category</Text>
+      </TouchableOpacity>
       <LoginFooter/>
+
     </View>
   );
-} 
+}
