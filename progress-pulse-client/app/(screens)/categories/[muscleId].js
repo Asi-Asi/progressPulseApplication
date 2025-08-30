@@ -1,9 +1,9 @@
-// app/(screens)/exercises/[muscleId].jsx
+// app/(screens)/categories/[muscleId].jsx
 import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, FlatList, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getExercisesFor } from '../../assets/data/exercises.js';
+import { getExercisesFor } from '../../../assets/data/exercises.js';
 
 // צבעים כמו במסך הקטגוריות
 const COLORS = {

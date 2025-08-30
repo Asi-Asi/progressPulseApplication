@@ -40,8 +40,8 @@ export default function MusclesCategoryScreen({ onSelect }) {
   }, [query, sortBy]);
 
    const handlePress = (muscle) => {
-    //נווט למסך תרגילים: /exercises/[muscleId]
-    router.push({ pathname: '/exercises/[muscleId]', params: { muscleId: muscle.id } });
+    //נווט למסך תרגילים: /categories/[muscleId]
+    router.push({ pathname: '/categories/[muscleId]', params: { muscleId: muscle.id } });
     onSelect?.(muscle); // אופציונלי
   };
 
