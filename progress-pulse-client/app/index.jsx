@@ -35,6 +35,12 @@ export default function Login() {
       <TouchableOpacity onPress={() => router.push('/categories/MusclesCategoryScreen')}>
         <Text>Go to Muscles Category</Text>
       </TouchableOpacity>
+      
+
+     <TouchableOpacity onPress={() => router.push('/Profile')} style={{ marginTop: 6 }}>
+      <Text style={{ color: '#FF5A2C', fontWeight: '700' }}>Go to Profile</Text>
+      </TouchableOpacity>
+
       <LoginFooter/>
 
     </View>
