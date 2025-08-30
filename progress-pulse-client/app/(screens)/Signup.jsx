@@ -3,9 +3,9 @@ import React from "react";
 import { ScrollView, View } from "react-native";
 import { Stack } from "expo-router";
 
-import SignupHeader from "../../assets/components/Auth/Signup/SignupHeader";
-import SignupForm from "../../assets/components/Auth/Signup/SignupForm";
-import SignupFooter from "../../assets/components/Auth/Signup/SignupFooter";
+import SignupHeader from "../../assets/components/screens/Auth/Signup/SignupHeader";
+import SignupForm from "../../assets/components/screens/Auth/Signup/SignupForm";
+import SignupFooter from "../../assets/components/screens/Auth/Signup/SignupFooter";
 
 export default function Signup() {
   return (

@@ -1,9 +1,9 @@
 import { View, Text,  TextInput, TouchableOpacity } from 'react-native';
 
 
-import LoginHeader from '../assets/components/Auth/Login/LoginHeader';
-import LoginForm from '../assets/components/Auth/Login/LoginForm';
-import LoginFooter from '../assets/components/Auth/Login/LoginFooter';
+import LoginHeader from '../assets/components/screens/Auth/Login/LoginHeader';
+import LoginForm from '../assets/components/screens/Auth/Login/LoginForm';
+import LoginFooter from '../assets/components/screens/Auth/Login/LoginFooter';
 import { Stack, useRouter} from 'expo-router';
 
 
