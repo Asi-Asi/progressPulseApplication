@@ -1,65 +1,61 @@
-import React from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { View, Text, Image, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 
 export default function ProfileCard({ user }) {
   const name = user?.fullName || user?.name || "User";
-  const initials = name
-    .split(" ")
-    .map((n) => n[0]?.toUpperCase())
-    .join("")
-    .slice(0, 2);
+  const initials = name.split(" ").map(n => n[0]?.toUpperCase()).join("").slice(0, 2);
 
   return (
-    <View style={styles.card}>
-      {/* Header row: avatar + names + chip */}
-      <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-        <View style={styles.avatar}>
+    <View className="bg-[#333533] rounded-2xl p-4 space-y-4 border border-[#000000]/40">
+      {/* Header */}
+      <View className="flex-row items-center gap-3">
+        <View className="w-[72px] h-[72px] rounded-full bg-[#1E1E1E] border-[3px] border-[#FFD100] items-center justify-center overflow-hidden">
           {user?.profileImage ? (
-            <Image source={{ uri: user.profileImage }} style={styles.avatarImg} />
+            <Image
+              source={{ uri: user.profileImage }}
+              className="w-full h-full rounded-full"
+              resizeMode="cover"
+            />
           ) : (
-            <Text style={styles.avatarInitials}>{initials || "U"}</Text>
+            <Text className="text-[#FFD100] text-2xl font-extrabold">{initials || "U"}</Text>
           )}
         </View>
 
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.email}>{user?.email || "-"}</Text>
-          <View style={styles.roleChip}>
-            <Text style={styles.roleText}>{user?.role || "user"}</Text>
+        <View className="flex-1">
+          <Text className="text-[#FFD100] text-xl font-extrabold">{name}</Text>
+          <Text className="text-[#CFCFCF] mt-0.5">{user?.email || "-"}</Text>
+          <View className="self-start bg-[#00A896] px-3 py-1 rounded-full mt-1.5">
+            <Text className="text-[#0B0F12] font-bold text-xs">{user?.role || "user"}</Text>
           </View>
         </View>
       </View>
 
-      {/* Details grid */}
-      <View style={styles.details}>
-        <Detail label="Phone" value={user?.phone || "—"} />
+      {/* Details */}
+      <View className="bg-[#2B2B2B] rounded-xl p-3 space-y-2">
+        <Detail label="Phone"    value={user?.phone || "—"} />
         <Detail label="Birthday" value={user?.birthDate || "—"} />
         <Detail label="Location" value={user?.location || "—"} />
-        <Detail label="User ID" value={(user?._id || "").toString()} />
+        <Detail label="User ID"  value={(user?._id || "").toString()} />
       </View>
 
       {/* Actions */}
-      <View style={styles.actions}>
-        <TouchableOpacity style={[styles.btn, styles.btnPrimary]} onPress={() => router.push("/EditProfile")}>
-          <Text style={styles.btnPrimaryText}>Edit Profile</Text>
+      <View className="flex-row gap-3">
+        <TouchableOpacity
+          className="flex-1 bg-[#3B82F6] py-3 rounded-xl items-center"
+          onPress={() => router.push("/EditProfile")}
+        >
+          <Text className="text-white font-extrabold">Edit Profile</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.btn, styles.btnDanger]}
+          className="flex-1 bg-[#FF5A2C] py-3 rounded-xl items-center"
           onPress={async () => {
             await AsyncStorage.removeItem("token");
             router.replace("/Login");
           }}
         >
-          <Text style={styles.btnDangerText}>Log out</Text>
+          <Text className="text-white font-extrabold">Log out</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -68,70 +64,9 @@ export default function ProfileCard({ user }) {
 
 function Detail({ label, value }) {
   return (
-    <View style={styles.detailRow}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue} numberOfLines={1}>
-        {value}
-      </Text>
+    <View className="flex-row justify-between gap-3">
+      <Text className="text-[#9AA0A6] font-semibold">{label}</Text>
+      <Text className="text-[#F4F4F4] flex-1 text-right" numberOfLines={1}>{value}</Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: "#333533",
-    borderRadius: 16,
-    padding: 16,
-    gap: 16,
-    // shadow
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 5,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "#1E1E1E",
-    borderWidth: 3,
-    borderColor: "#FFD100",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarImg: { width: "100%", height: "100%", borderRadius: 36 },
-  avatarInitials: { color: "#FFD100", fontSize: 24, fontWeight: "800" },
-  name: { color: "#FFD100", fontSize: 20, fontWeight: "800" },
-  email: { color: "#CFCFCF", marginTop: 2 },
-  roleChip: {
-    alignSelf: "flex-start",
-    backgroundColor: "#00A896",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginTop: 6,
-  },
-  roleText: { color: "#0B0F12", fontWeight: "700", fontSize: 12 },
-  details: {
-    backgroundColor: "#2B2B2B",
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
-  },
-  detailRow: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  detailLabel: { color: "#9AA0A6", fontWeight: "600" },
-  detailValue: { color: "#F4F4F4", flex: 1, textAlign: "right" },
-  actions: { flexDirection: "row", gap: 12 },
-  btn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnPrimary: { backgroundColor: "#3B82F6" },
-  btnPrimaryText: { color: "#fff", fontWeight: "800" },
-  btnDanger: { backgroundColor: "#FF5A2C" },
-  btnDangerText: { color: "#fff", fontWeight: "800" },
-});

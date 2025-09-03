@@ -1,69 +1,90 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, FlatList } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import ExerciseFilterBar from '../../../assets/components/Main/ExerciseFilterBar';
-import ExerciseCard from '../../../assets/components/screens/exercises/ExerciseCard';
+import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { MUSCLES } from '../../../assets/data/muscles';
 import { getExercisesFor } from '../../../assets/data/exercises';
+import { planDraft } from '../../../assets/lib/planDraft';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-const titleFromId = (id) => id?.charAt(0).toUpperCase() + id?.slice(1);
+const COLORS = {
+  bg: '#1E1E1E',
+  text: '#F4F4F4',
+  primary: '#FFD100',
+  card: '#333533',
+  muted: '#AAAAAA',
+};
 
-export default function ExercisesByMuscle() {
-  const { muscleId } = useLocalSearchParams();
+export default function ExercisesByMusclePicker() {
+  const router = useRouter();
+  const { muscleId, targetDayId } = useLocalSearchParams();
+  const muscle = MUSCLES.find(m => m.id === muscleId);
   const [query, setQuery] = useState('');
-  const [level, setLevel] = useState('all'); // 'all' | 'beginner' | 'intermediate'
 
-  const all = getExercisesFor(String(muscleId));
-
-  const filtered = useMemo(() => {
+  const list = useMemo(() => {
+    const base = getExercisesFor(muscleId) || [];
     const q = query.trim().toLowerCase();
-    return all.filter(e =>
-      (!q || e.name.toLowerCase().includes(q)) &&
-      (level === 'all' || e.level.toLowerCase() === level)
+    if (!q) return base;
+    return base.filter(ex =>
+      ex.name.toLowerCase().includes(q) ||
+      (ex.type?.toLowerCase() || '').includes(q) ||
+      (ex.equipment?.toLowerCase() || '').includes(q)
     );
-  }, [all, query, level]);
-
-  const cycleLevel = () =>
-    setLevel(prev => (prev === 'all' ? 'beginner' : prev === 'beginner' ? 'intermediate' : 'all'));
+  }, [muscleId, query]);
 
   return (
-    <View className="flex-1 bg-darkBg p-4 pt-14 android:pt-4">
+    <View className="flex-1" style={{ backgroundColor: COLORS.bg }}>
       <Stack.Screen
         options={{
-          title: `${titleFromId(String(muscleId))} • Exercises`,
-          headerStyle: { backgroundColor: '#1E1E1E' },
-          headerTintColor: '#FFD100',
-          headerTitleStyle: { fontWeight: 'bold', fontSize: 20 },
+          title: muscle ? muscle.name : 'Exercises',
+          headerStyle: { backgroundColor: COLORS.bg },
+          headerTintColor: COLORS.primary,
         }}
       />
 
-      <ExerciseFilterBar
-        query={query}
-        onChangeQuery={setQuery}
-        level={level}
-        onCycleLevel={cycleLevel}
-      />
+      <View className="p-4">
+        <Text className="font-bold mb-2" style={{ color: COLORS.text, fontSize: 18 }}>
+          Choose an exercise
+        </Text>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item, idx) => `${item.id}-${idx}`}
-        contentContainerStyle={{ paddingBottom: 24 }}
-        ItemSeparatorComponent={() => <View className="h-3" />}
-        renderItem={({ item }) => (
-          <ExerciseCard
-            item={item}
-            onPressDetails={() => {
-              // TODO: navigate to exercise details screen when you add it
-              // e.g., router.push({ pathname: '/exercises/[exerciseId]', params: { exerciseId: item.id } });
-            }}
-          />
-        )}
-        ListHeaderComponent={
-          <Text className="text-secondaryText mb-2">
-            {all.length} total • {filtered.length} shown
-          </Text>
-        }
-      />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search by name/type/equipment"
+          placeholderTextColor={COLORS.muted}
+          className="rounded-xl px-4 py-3 mb-3"
+          style={{ backgroundColor: '#2A2B2A', color: COLORS.text }}
+        />
+
+        <FlatList
+          data={list}
+          keyExtractor={(item) => item.id}
+          ItemSeparatorComponent={() => <View className="h-2" />}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() => {
+                // add to plan and go back to /plan
+                planDraft.addExercise(targetDayId, { ...item, muscle: muscle?.name, muscleId, sets: 1 });
+                router.push('/plan');
+              }}
+              className="rounded-xl px-4 py-3"
+              style={{ backgroundColor: COLORS.card }}
+            >
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center gap-3">
+                  <MaterialCommunityIcons name="dumbbell" size={20} color={COLORS.primary} />
+                  <View>
+                    <Text style={{ color: COLORS.text, fontWeight: '600' }}>{item.name}</Text>
+                    <Text style={{ color: COLORS.muted, fontSize: 12 }}>
+                      {item.type} • {item.equipment}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={{ color: COLORS.primary, fontWeight: '700' }}>Add</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
     </View>
   );
 }
-  

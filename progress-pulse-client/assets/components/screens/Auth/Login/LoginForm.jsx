@@ -4,16 +4,16 @@ import { TextInput, TouchableOpacity, Text, Alert, Platform, ActivityIndicator }
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 
-// ===== Base URL config (choose PROD or DEV) =====
-const PC_LAN_IP = '192.168.137.1'; // IP של ה-PC כשבודקים על פלאפון אמיתי
 const PROD_URL = 'https://progresspulseapplication.onrender.com';
 const DEV_URL  = Platform.select({
-  web:     'http://localhost:5500',   // דפדפן / Expo web
-  ios:     'http://localhost:5500',   // iOS simulator
-  android: 'http://10.0.2.2:5500',    // Android emulator
-  default: `http://${PC_LAN_IP}:5500`,// פלאפון אמיתי על אותה רשת
+  web:     'http://localhost:5500',
+  ios:     'http://localhost:5500',
+  android: 'http://10.0.2.2:5500',
+  default: 'http://192.168.137.1:5500',
 });
-const USE_PROD = true;                // שנה ל-false כשבודקים מקומי
+
+const USE_PROD = true;
+
 const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
 
 export default function LoginForm() {
@@ -22,7 +22,18 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');     // סיסמה
   const [loading, setLoading]   = useState(false);  // מצב טעינה (לספינר)
 
-  const alertFn = Platform.OS === 'web' ? window.alert : Alert.alert; // אלרט אחיד
+  const alertFn = (title, msg = '') => {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') {
+      window.alert(`${title}\n${msg}`);
+    } else {
+      // רינדור בצד שרת – לא להשתמש ב-window
+      console.warn('alert (SSR):', title, msg);
+    }
+  } else {
+    Alert.alert(title, msg);
+  }
+};
 
   const handleLogin = async () => {
     if (!email || !password) {                       // ולידציה בסיסית

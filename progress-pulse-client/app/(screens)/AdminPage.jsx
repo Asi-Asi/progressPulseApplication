@@ -1,8 +1,8 @@
 // app/AdminPage.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import {
-  View, Text, FlatList, RefreshControl, Modal,
-  TextInput, TouchableOpacity, Alert, Platform,
+  View, Text, TextInput, TouchableOpacity, Alert, Platform,
+  Modal, ScrollView, RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack } from "expo-router";
@@ -15,7 +15,15 @@ const API_HOST =
                              : "http://localhost:5500");
 
 const API = `${API_HOST}/api`;
-const CREATE_ENDPOINT = `${API}/users`; // ← change to `${API}/users/register` if that's your route
+const CREATE_ENDPOINT = `${API}/users`; 
+
+
+  const safeJson = async (res) => {
+  const ct  = res.headers.get('content-type') || '';
+  const len = res.headers.get('content-length');
+  if (res.status === 204 || len === '0' || !ct.includes('application/json')) return null;
+  try { return await res.json(); } catch { return null; }
+};
 
 export default function AdminPage() {
   const [users, setUsers] = useState([]);
@@ -41,9 +49,8 @@ export default function AdminPage() {
       const res = await fetch(`${API}/users`, {
         headers: { Authorization: token ? `Bearer ${token}` : "" },
       });
-      const data = await res.json();
+      const data = await safeJson(res);
 
-      // Normalize: always keep _id as a string
       const list = (Array.isArray(data) ? data : data?.users || []).map(u => ({
         ...u,
         _id: String(u._id ?? u.id ?? ""),
@@ -69,7 +76,8 @@ export default function AdminPage() {
 
   const saveEdit = async () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Alert.alert("Invalid email", "Please enter a valid email."); return;
+      Alert.alert("Invalid email", "Please enter a valid email.");
+      return;
     }
     setLoading(true);
     try {
@@ -86,9 +94,7 @@ export default function AdminPage() {
       if (!res.ok) {
         Alert.alert("Update failed", data?.message || "Try again.");
       } else {
-        setUsers((prev) =>
-          prev.map((u) => (u._id === editing._id ? { ...u, name, email } : u))
-        );
+        setUsers(prev => prev.map(u => (u._id === editing._id ? { ...u, name, email } : u)));
         setEditing(null);
       }
     } catch (e) {
@@ -115,22 +121,16 @@ export default function AdminPage() {
         onPress: async () => {
           try {
             const token = await AsyncStorage.getItem("token");
-            const url = `${API}/users/${encodeURIComponent(userId)}`;
-            const res = await fetch(url, {
+            const res = await fetch(`${API}/users/${encodeURIComponent(userId)}`, {
               method: "DELETE",
               headers: { Authorization: token ? `Bearer ${token}` : "" },
             });
-
-            // success: 200 or 204
             if (res.ok) {
               setUsers(prev => prev.filter(x => String(x._id ?? x.id) !== userId));
               return;
             }
-
-            // not ok: try to read message
-            const data = await res.json().catch(() => ({}));
+            const data = await safeJson(res);
             Alert.alert("Delete failed", data?.message || `Status ${res.status}`);
-            console.warn("Delete failed", res.status, data);
           } catch (e) {
             console.error(e);
             Alert.alert("Error", "Unable to delete user.");
@@ -140,12 +140,9 @@ export default function AdminPage() {
     ]);
   };
 
-  // -------- CREATE --------
+  // CREATE
   const openCreate = () => {
-    setCName("");
-    setCEmail("");
-    setCPassword("");
-    setCreateOpen(true);
+    setCName(""); setCEmail(""); setCPassword(""); setCreateOpen(true);
   };
 
   const saveCreate = async () => {
@@ -169,12 +166,11 @@ export default function AdminPage() {
         }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await safeJson(res);
 
       if (res.status === 201 || res.status === 200) {
         setCreateOpen(false);
-        // keep your state logic simple—re-sync from DB
-        await load();
+        await load(); // ריענון מהרשימה
       } else if (res.status === 409) {
         Alert.alert("Email already exists", "Try a different email.");
       } else {
@@ -189,7 +185,7 @@ export default function AdminPage() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#1E1E1E" }}>
+    <View className="flex-1 bg-[#1E1E1E]">
       <Stack.Screen
         options={{
           title: "Admin",
@@ -199,76 +195,63 @@ export default function AdminPage() {
         }}
       />
 
-      <FlatList
-        data={users}
-        keyExtractor={(item) => item._id}
-        numColumns={2}
-        columnWrapperStyle={{ gap: 12 }}
-        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 96 }} 
+      {/* רשימת משתמשים - גריד 2 עמודות */}
+      <ScrollView
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={load} tintColor="#FFD100" />
         }
-        renderItem={({ item }) => (
-          <UserCard user={item} onEdit={startEdit} onDelete={deleteUser} />
+        className="flex-1"
+      >
+        {users.length === 0 ? (
+          <Text className="text-[#CFCFCF] text-center mt-8">No users yet.</Text>
+        ) : (
+          <View className="px-4 pb-24">
+            <View className="flex-row flex-wrap -mx-1.5">
+              {users.map((item) => (
+                <View key={item._id} className="w-1/2 px-1.5 mb-3">
+                  <UserCard user={item} onEdit={startEdit} onDelete={deleteUser} />
+                </View>
+              ))}
+            </View>
+          </View>
         )}
-        ListEmptyComponent={
-          <Text style={{ color: "#CFCFCF", textAlign: "center", marginTop: 32 }}>
-            No users yet.
-          </Text>
-        }
-      />
+      </ScrollView>
 
-      {/* Floating + button */}
+      {/* כפתור צף ליצירה */}
       <TouchableOpacity
         onPress={openCreate}
         activeOpacity={0.85}
-        style={{
-          position: "absolute",
-          right: 20,
-          bottom: 24,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: "#FF5A2C",
-          alignItems: "center",
-          justifyContent: "center",
-          shadowColor: "#000",
-          shadowOpacity: 0.3,
-          shadowRadius: 6,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 5,
-        }}
+        className="absolute right-5 bottom-6 w-14 h-14 rounded-full bg-[#FF5A2C] items-center justify-center"
       >
-        <Text style={{ color: "#fff", fontSize: 28, fontWeight: "800", marginTop: -2 }}>＋</Text>
+        <Text className="text-white text-2xl font-extrabold -mt-0.5">＋</Text>
       </TouchableOpacity>
 
       {/* Edit modal */}
       <Modal visible={!!editing} animationType="slide" transparent onRequestClose={() => setEditing(null)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 }}>
-          <View style={{ backgroundColor: "#2B2B2B", borderRadius: 12, padding: 16, gap: 12 }}>
-            <Text style={{ color: "#FFD100", fontWeight: "800", fontSize: 18 }}>Edit User</Text>
+        <View className="flex-1 bg-black/50 justify-center p-5">
+          <View className="bg-[#2B2B2B] rounded-xl p-4 space-y-3">
+            <Text className="text-[#FFD100] font-extrabold text-lg">Edit User</Text>
+
             <TextInput
               value={name} onChangeText={setName} placeholder="Name" placeholderTextColor="#9CA3AF"
-              style={{ backgroundColor: "#1F2937", color: "#fff", borderRadius: 10, paddingHorizontal: 12, height: 44 }}
+              className="bg-[#1F2937] text-white rounded-xl px-3 h-11"
             />
             <TextInput
               value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address"
               placeholder="Email" placeholderTextColor="#9CA3AF"
-              style={{ backgroundColor: "#1F2937", color: "#fff", borderRadius: 10, paddingHorizontal: 12, height: 44 }}
+              className="bg-[#1F2937] text-white rounded-xl px-3 h-11"
             />
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
-              <TouchableOpacity
-                onPress={() => setEditing(null)}
-                style={{ flex: 1, backgroundColor: "#6B7280", padding: 12, borderRadius: 10, alignItems: "center" }}
-              >
-                <Text style={{ color: "#fff", fontWeight: "700" }}>Cancel</Text>
+
+            <View className="flex-row gap-2 mt-1">
+              <TouchableOpacity onPress={() => setEditing(null)} className="flex-1 bg-[#6B7280] p-3 rounded-xl items-center">
+                <Text className="text-white font-bold">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={saveEdit}
                 disabled={loading}
-                style={{ flex: 1, backgroundColor: "#FF5A2C", padding: 12, borderRadius: 10, alignItems: "center", opacity: loading ? 0.6 : 1 }}
+                className={`flex-1 p-3 rounded-xl items-center ${loading ? "opacity-60 bg-[#FF5A2C]" : "bg-[#FF5A2C]"}`}
               >
-                <Text style={{ color: "#fff", fontWeight: "700" }}>{loading ? "Saving..." : "Save"}</Text>
+                <Text className="text-white font-bold">{loading ? "Saving..." : "Save"}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -277,36 +260,35 @@ export default function AdminPage() {
 
       {/* Create modal */}
       <Modal visible={createOpen} animationType="slide" transparent onRequestClose={() => setCreateOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 }}>
-          <View style={{ backgroundColor: "#2B2B2B", borderRadius: 12, padding: 16, gap: 12 }}>
-            <Text style={{ color: "#FFD100", fontWeight: "800", fontSize: 18 }}>Create User</Text>
+        <View className="flex-1 bg-black/50 justify-center p-5">
+          <View className="bg-[#2B2B2B] rounded-xl p-4 space-y-3">
+            <Text className="text-[#FFD100] font-extrabold text-lg">Create User</Text>
+
             <TextInput
               value={cName} onChangeText={setCName} placeholder="Name" placeholderTextColor="#9CA3AF"
-              style={{ backgroundColor: "#1F2937", color: "#fff", borderRadius: 10, paddingHorizontal: 12, height: 44 }}
+              className="bg-[#1F2937] text-white rounded-xl px-3 h-11"
             />
             <TextInput
               value={cEmail} onChangeText={setCEmail} autoCapitalize="none" keyboardType="email-address"
               placeholder="Email" placeholderTextColor="#9CA3AF"
-              style={{ backgroundColor: "#1F2937", color: "#fff", borderRadius: 10, paddingHorizontal: 12, height: 44 }}
+              className="bg-[#1F2937] text-white rounded-xl px-3 h-11"
             />
             <TextInput
               value={cPassword} onChangeText={setCPassword} secureTextEntry
               placeholder="Password" placeholderTextColor="#9CA3AF"
-              style={{ backgroundColor: "#1F2937", color: "#fff", borderRadius: 10, paddingHorizontal: 12, height: 44 }}
+              className="bg-[#1F2937] text-white rounded-xl px-3 h-11"
             />
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
-              <TouchableOpacity
-                onPress={() => setCreateOpen(false)}
-                style={{ flex: 1, backgroundColor: "#6B7280", padding: 12, borderRadius: 10, alignItems: "center" }}
-              >
-                <Text style={{ color: "#fff", fontWeight: "700" }}>Cancel</Text>
+
+            <View className="flex-row gap-2 mt-1">
+              <TouchableOpacity onPress={() => setCreateOpen(false)} className="flex-1 bg-[#6B7280] p-3 rounded-xl items-center">
+                <Text className="text-white font-bold">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={saveCreate}
                 disabled={creating}
-                style={{ flex: 1, backgroundColor: "#FF5A2C", padding: 12, borderRadius: 10, alignItems: "center", opacity: creating ? 0.6 : 1 }}
+                className={`flex-1 p-3 rounded-xl items-center ${creating ? "opacity-60 bg-[#FF5A2C]" : "bg-[#FF5A2C]"}`}
               >
-                <Text style={{ color: "#fff", fontWeight: "700" }}>{creating ? "Creating..." : "Create"}</Text>
+                <Text className="text-white font-bold">{creating ? "Creating..." : "Create"}</Text>
               </TouchableOpacity>
             </View>
           </View>

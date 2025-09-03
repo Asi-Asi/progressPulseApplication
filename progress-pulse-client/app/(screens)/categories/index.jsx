@@ -1,26 +1,30 @@
+// app/(screens)/categories/index.jsx
 import React, { useMemo, useState } from 'react';
 import { View, Text, FlatList } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
 import { MUSCLES } from '../../../assets/data/muscles';
 import SearchSortBar from '../../../assets/components/Main/SearchSortBar';
 import MuscleCard from '../../../assets/components/screens/categories/MuscleCard';
 
-export default function MusclesCategoryScreen({ onSelect }) {
+export default function MusclesCategoryScreen() {
   const router = useRouter();
+  const { targetDayId } = useLocalSearchParams(); // passed from /plan
   const [query, setQuery]   = useState('');
   const [sortBy, setSortBy] = useState('alpha');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = MUSCLES.filter(m => m.name.toLowerCase().includes(q));
-    if (sortBy === 'alpha') list = list.sort((a, b) => a.name.localeCompare(b.name));
+    if (sortBy === 'alpha') list = [...list].sort((a, b) => a.name.localeCompare(b.name)); // avoid mutating original
     return list;
   }, [query, sortBy]);
 
   const handlePress = (muscle) => {
-    router.push({ pathname: '/categories/[muscleId]', params: { muscleId: muscle.id } });
-    onSelect?.(muscle);
+    router.push({
+      pathname: '/categories/[muscleId]',
+      params: { muscleId: muscle.id, targetDayId: String(targetDayId ?? '') },
+    });
   };
 
   return (
