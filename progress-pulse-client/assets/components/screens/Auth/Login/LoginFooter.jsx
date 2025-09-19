@@ -7,10 +7,13 @@ export default function LoginFooter() {
 
   return (
     <TouchableOpacity
-      onPress={() => router.push('/Signup')}>
-
-    <Text className="text-[#AAAAAA] mt-6">
-        Don’t have an account? <Text className="text-[#FFD100] font-bold">Sign Up</Text>
+      onPress={() => router.push("/Signup")}
+      className="mt-6"
+      accessibilityRole="button"
+    >
+      <Text className="text-muted text-center">
+        Don’t have an account?{" "}
+        <Text className="text-primary font-semibold">Sign Up</Text>
       </Text>
     </TouchableOpacity>
   );

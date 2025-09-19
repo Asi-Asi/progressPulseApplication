@@ -81,62 +81,57 @@ export default function   SignupForm({ onSubmit }) {
   }
 
   return (
-    <View className="w-full">
+    <>
       {/* First Name */}
       <TextInput
-        value={firstName} onChangeText={setFirstName}
-        placeholder="First Name" placeholderTextColor="#AAAAAA"
-        autoCapitalize="words" textContentType="givenName"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
+        value={firstName}
+        onChangeText={setFirstName}
+        placeholder="First Name"
+        placeholderTextColor="#667085"
+        autoCapitalize="words"
+        textContentType="givenName"
+        className="w-full px-4 py-3 rounded-xl mb-4 bg-field border border-fieldBorder text-text"
+        editable={!loading}
       />
 
       {/* Last Name */}
       <TextInput
-        value={lastName} onChangeText={setLastName}
-        placeholder="Last Name" placeholderTextColor="#AAAAAA"
-        autoCapitalize="words" textContentType="familyName"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
+        value={lastName}
+        onChangeText={setLastName}
+        placeholder="Last Name"
+        placeholderTextColor="#667085"
+        autoCapitalize="words"
+        textContentType="familyName"
+        className="w-full px-4 py-3 rounded-xl mb-4 bg-field border border-fieldBorder text-text"
+        editable={!loading}
       />
 
-     
-      {/* Sex (Male/Female) */}
-      <View className="flex-row gap-3 mb-4">
-        {/* Male */}
+      {/* Sex (Male / Female) – styled like inputs */}
+      <View className="w-full flex-row gap-3 mb-4">
         <TouchableOpacity
           onPress={() => setSex('male')}
-          activeOpacity={0.9}
-          accessibilityRole="button"
-          accessibilityState={{ selected: sex === 'male' }}
-          className={`relative flex-1 items-center justify-center p-4 rounded-2xl border
-            ${sex === 'male'
-              ? 'bg-secondaryBg border-[#FFD100] shadow-2xl'
-              : 'bg-secondaryBg border-[#333533] opacity-80'}`}
           disabled={loading}
+          activeOpacity={0.9}
+          className={`flex-1 px-4 py-3 rounded-xl border 
+            ${sex === 'male'
+              ? 'bg-field border-primary'
+              : 'bg-field border-fieldBorder'}`}
         >
-          {sex === 'male' && (
-            <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#FFD100]" />
-          )}
-          <Text className={`font-bold ${sex === 'male' ? 'text-[#FFD100]' : 'text-primaryText'}`}>
+          <Text className={`${sex === 'male' ? 'text-primary' : 'text-text'} font-bold text-center`}>
             Male
           </Text>
         </TouchableOpacity>
 
-        {/* Female */}
         <TouchableOpacity
           onPress={() => setSex('female')}
-          activeOpacity={0.9}
-          accessibilityRole="button"
-          accessibilityState={{ selected: sex === 'female' }}
-          className={`relative flex-1 items-center justify-center p-4 rounded-2xl border
-            ${sex === 'female'
-              ? 'bg-secondaryBg border-[#FFD100] shadow-2xl'
-              : 'bg-secondaryBg border-[#333533] opacity-80'}`}
           disabled={loading}
+          activeOpacity={0.9}
+          className={`flex-1 px-4 py-3 rounded-xl border 
+            ${sex === 'female'
+              ? 'bg-field border-primary'
+              : 'bg-field border-fieldBorder'}`}
         >
-          {sex === 'female' && (
-            <View className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[#FFD100]" />
-          )}
-          <Text className={`font-bold ${sex === 'female' ? 'text-[#FFD100]' : 'text-primaryText'}`}>
+          <Text className={`${sex === 'female' ? 'text-primary' : 'text-text'} font-bold text-center`}>
             Female
           </Text>
         </TouchableOpacity>
@@ -144,33 +139,48 @@ export default function   SignupForm({ onSubmit }) {
 
       {/* Email */}
       <TextInput
-        value={email} onChangeText={setEmail}
-        placeholder="Email" placeholderTextColor="#AAAAAA"
-        keyboardType="email-address" autoCapitalize="none" textContentType="emailAddress"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-4"
+        value={email}
+        onChangeText={setEmail}
+        placeholder="Email"
+        placeholderTextColor="#667085"
+        keyboardType="email-address"
+        autoCapitalize="none"
+        textContentType="emailAddress"
+        className="w-full px-4 py-3 rounded-xl mb-4 bg-field border border-fieldBorder text-text"
         editable={!loading}
       />
 
       {/* Password */}
       <TextInput
-        value={password} onChangeText={setPassword}
-        placeholder="Password" placeholderTextColor="#AAAAAA"
-        secureTextEntry autoCapitalize="none" textContentType="password"
-        className="bg-secondaryBg text-primaryText p-4 rounded-xl mb-6"
+        value={password}
+        onChangeText={setPassword}
+        placeholder="Password"
+        placeholderTextColor="#667085"
+        secureTextEntry
+        autoCapitalize="none"
+        textContentType="password"
+        className="w-full px-4 py-3 rounded-xl mb-6 bg-field border border-fieldBorder text-text"
         editable={!loading}
       />
 
       {/* Submit */}
       <TouchableOpacity
         onPress={handleSubmit}
-        className="bg-action p-4 rounded-xl"
         disabled={loading}
+        accessibilityState={{ disabled: loading }}
+        className="w-full py-3 rounded-xl bg-primary disabled:opacity-60 active:opacity-90"
+        activeOpacity={0.9}
       >
-        <Text className="text-primaryText text-center font-bold text-base">
+        <Text className="text-center text-white font-bold text-base">
           {loading ? 'Creating Account…' : 'Create Account'}
         </Text>
-        {loading ? <ActivityIndicator style={{ marginTop: 10 }} /> : null}
+
+        {loading ? (
+          <ActivityIndicator style={{ marginTop: 10 }} color="#FFFFFF" />
+        ) : null}
       </TouchableOpacity>
-    </View>
+    </>
   );
+
+
 }

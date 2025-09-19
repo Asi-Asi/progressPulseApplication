@@ -6,7 +6,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack } from "expo-router";
-import UserCard from "./UserCard";
+import UserCard from "./profile";
 
 const API_HOST =
   process.env.EXPO_PUBLIC_API_BASE ||

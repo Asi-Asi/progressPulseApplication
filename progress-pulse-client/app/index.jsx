@@ -1,5 +1,6 @@
-import { View, Text,  TextInput, TouchableOpacity } from 'react-native';
+import { View} from 'react-native';
 
+import AppLogo from "../assets/components/ui/AppLogo"; 
 
 import LoginHeader from '../assets/components/screens/Auth/Login/LoginHeader';
 import LoginForm from '../assets/components/screens/Auth/Login/LoginForm';
@@ -13,33 +14,19 @@ export default function Login() {
   const router = useRouter();
 
   return (
-    <View  className="flex-1 justify-center items-center bg-[#1E1E1E] px-6">
-      <Stack.Screen name='Login' options={{  title: 'Login ',
-        headerStyle: {
-        backgroundColor: '#1E1E1E' // צבע הרקע של הסרגל העליון
-        },
-        headerTintColor: '#FFD100', // צבע הטקסט וכפתורי חזור
-        headerTitleStyle: {
-        fontWeight: 'bold',
-        fontSize: 26, // גודל הטקסט של הכותרת
-        } }}
+    <View  className="flex-1 justify-center items-center bg-[#f8f0f0ff] px-6">
+      <Stack.Screen
+        options={{
+          headerTitle: () => <AppLogo/>, 
+          headerTitleAlign: "left",
+          headerStyle: { backgroundColor: "#FDFBFA" },
+        }}
       />
       {/* כותרת */}
       <LoginHeader/>
 
       {/*שדות הטופס*/}
       <LoginForm/>  
-      
-
-
-      <TouchableOpacity onPress={() => router.push('/categories/MusclesCategoryScreen')}>
-        <Text>Go to Muscles Category</Text>
-      </TouchableOpacity>
-      
-
-     <TouchableOpacity onPress={() => router.push('/Profile')} style={{ marginTop: 6 }}>
-      <Text style={{ color: '#FF5A2C', fontWeight: '700' }}>Go to Profile</Text>
-      </TouchableOpacity>
 
       <LoginFooter/>
 

@@ -3,31 +3,27 @@ import React from "react";
 import { ScrollView, View } from "react-native";
 import { Stack } from "expo-router";
 
+import AppLogo from "../../assets/components/ui/AppLogo";
+
 import SignupHeader from "../../assets/components/screens/Auth/Signup/SignupHeader";
 import SignupForm from "../../assets/components/screens/Auth/Signup/SignupForm";
 import SignupFooter from "../../assets/components/screens/Auth/Signup/SignupFooter";
 
 export default function Signup() {
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1, backgroundColor: "#1E1E1E" }}>
+    <ScrollView
+      className="flex-1 bg-bg"                
+      // contentContainerStyle={{ flexGrow: 1 }}  // keep this (RN prop); or use contentContainerClassName if supported
+      contentContainerClassName="flex-grow"  // ← NativeWind v4+ supports this; use it if available
+    >
       <Stack.Screen
         options={{
-          title: "Login", // keep header style identical to login
-          headerStyle: { backgroundColor: "#1E1E1E" },
-          headerTintColor: "#FFD100",
-          headerTitleStyle: { fontWeight: "bold", fontSize: 26 },
-        }}
-      />
-      <View
-        style={{
-          flex: 1,
-          justifyContent: "center",
-          gap: 24,
-          paddingHorizontal: 24,
-          paddingVertical: 32,
-          backgroundColor: "#1E1E1E",
-        }}
-      >
+        headerTitle: () => <AppLogo />, 
+        headerTitleAlign: "left",
+        headerStyle: { backgroundColor: "#FDFBFA" },
+      }}
+      />  
+      <View className="flex-1 justify-center gap-6 px-6 py-8 bg-bg">
         <SignupHeader />
         <SignupForm />
         <SignupFooter />

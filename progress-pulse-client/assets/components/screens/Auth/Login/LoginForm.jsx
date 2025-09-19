@@ -14,7 +14,7 @@ const DEV_URL  = Platform.select({
 
 const USE_PROD = true;
 
-const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
+const BASE_URL = USE_PROD ;
 
 export default function LoginForm() {
   const router = useRouter();
@@ -85,36 +85,40 @@ export default function LoginForm() {
 
   return (
     <>
-      {/* אימייל */}
+      {/* Email */}
       <TextInput
         placeholder="Email"
-        placeholderTextColor="#CCCCCC"
-        value={email} onChangeText={setEmail}
-        autoCapitalize="none" keyboardType="email-address"
-        className="w-full bg-secondaryBg text-[#F4F4F4] px-4 py-3 rounded-xl mb-4 border border-[#000000]"
-        editable={!loading}                           
+        placeholderTextColor="#667085" 
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        className="w-full px-4 py-3 rounded-xl mb-4 bg-field border border-fieldBorder text-text"
       />
 
-      {/* סיסמה */}
       <TextInput
         placeholder="Password"
-        placeholderTextColor="#CCCCCC"
+        placeholderTextColor="#667085"
         secureTextEntry
-        value={password} onChangeText={setPassword}
-        className="w-full bg-secondaryBg text-primaryText px-4 py-3 rounded-xl mb-6 border border-[#000000]"
-        editable={!loading}
+        value={password}
+        onChangeText={setPassword}
+        className="w-full px-4 py-3 rounded-xl mb-6 bg-field border border-fieldBorder text-text"
       />
 
-      {/* כפתור התחברות + ספינר טעינה */}
+      {/* Button + Spinner */}
       <TouchableOpacity
-        className={`w-full py-3 rounded-xl ${loading ? 'bg-gray-600' : 'bg-action'}`}
+        className="w-full py-3 rounded-xl bg-primary disabled:opacity-60 active:opacity-90"
         onPress={handleLogin}
         disabled={loading}
+        accessibilityState={{ disabled: loading }}
       >
-        <Text className="text-center text-primaryText font-bold text-base">
-          {loading ? 'Logging in…' : 'Login'}
+        <Text className="text-center text-white font-bold text-base">
+          {loading ? "Logging in…" : "Login"}
         </Text>
-        {loading ? <ActivityIndicator style={{ marginTop: 10 }} /> : null}
+
+        {loading ? (
+          <ActivityIndicator style={{ marginTop: 10 }} color={"#FFFFFF"} />
+        ) : null}
       </TouchableOpacity>
     </>
   );
