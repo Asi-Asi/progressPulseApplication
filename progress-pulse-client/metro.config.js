@@ -1,6 +1,6 @@
 // metro.config.js
 const { getDefaultConfig } = require('@expo/metro-config');
-const { withNativeWind } = require('nativewind/metro'); // ✅ correct import & casing
+const { withNativeWind } = require('nativewind/metro'); 
 
 const config = getDefaultConfig(__dirname);
 

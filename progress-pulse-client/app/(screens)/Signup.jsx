@@ -1,5 +1,4 @@
 // app/(screens)/Signup.jsx
-import React from "react";
 import { ScrollView, View } from "react-native";
 import { Stack } from "expo-router";
 
@@ -13,7 +12,6 @@ export default function Signup() {
   return (
     <ScrollView
       className="flex-1 bg-bg"                
-      // contentContainerStyle={{ flexGrow: 1 }}  // keep this (RN prop); or use contentContainerClassName if supported
       contentContainerClassName="flex-grow"  // ← NativeWind v4+ supports this; use it if available
     >
       <Stack.Screen
