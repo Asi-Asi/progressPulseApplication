@@ -19,7 +19,7 @@ export default function Login() {
         options={{
           headerTitle: () => <AppLogo/>, 
           headerTitleAlign: "left",
-          headerStyle: { backgroundColor: "#FDFBFA" },
+          headerStyle: { backgroundColor: "#FDFBFA"},
         }}
       />
       {/* כותרת */}
