@@ -7,7 +7,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        field:"#E1E3E6", // input background (soft gray)
+        field:"#E1E3E6", 
         fieldBorder:"#C7CDD6",
         fieldMuted:  "#667085",
         bg: '#FDFBFA',

@@ -21,7 +21,7 @@ export default function Login() {
           headerTitleAlign: "left",
           headerStyle: { backgroundColor: "#FDFBFA" },
         }}
-      />
+      /> 
       {/* כותרת */}
       <LoginHeader/>
 
