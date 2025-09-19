@@ -1,4 +1,3 @@
-import React from "react";
 import { Pressable } from "react-native";
 import LogoSvg from "../../../assets/images/progress-logo.svg"; 
 import { useRouter } from "expo-router";
