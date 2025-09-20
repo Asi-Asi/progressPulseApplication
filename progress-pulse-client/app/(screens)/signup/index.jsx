@@ -2,11 +2,11 @@
 import { ScrollView, View } from "react-native";
 import { Stack } from "expo-router";
 
-import AppLogo from "../../assets/components/ui/AppLogo";
+import AppLogo from "../../../assets/components/ui/AppLogo";
 
-import SignupHeader from "../../assets/components/screens/Auth/Signup/SignupHeader";
-import SignupForm from "../../assets/components/screens/Auth/Signup/SignupForm";
-import SignupFooter from "../../assets/components/screens/Auth/Signup/SignupFooter";
+import SignupHeader from "../../../assets/components/screens/Auth/Signup/SignupHeader";
+import SignupForm from "../../../assets/components/screens/Auth/Signup/SignupForm";
+import SignupFooter from "../../../assets/components/screens/Auth/Signup/SignupFooter";
 
 export default function Signup() {
   return (

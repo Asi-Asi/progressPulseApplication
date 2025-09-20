@@ -7,7 +7,7 @@ export default function LoginFooter() {
 
   return (
     <TouchableOpacity
-      onPress={() => router.push("/Signup")}
+      onPress={() => router.push("/signup")}
       className="mt-6"
       accessibilityRole="button"
     >

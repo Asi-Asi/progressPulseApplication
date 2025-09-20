@@ -6,13 +6,13 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack } from "expo-router";
-import UserCard from "./profile";
+import UserCard from "../profile/index.jsx";
 
 const API_HOST =
   process.env.EXPO_PUBLIC_API_BASE ||
   (Platform.OS === "android" ? "http://10.0.2.2:5500"
-   : Platform.OS === "ios"   ? "http://127.0.0.1:5500"
-                             : "http://localhost:5500");
+    : Platform.OS === "ios"   ? "http://127.0.0.1:5500"
+    : "http://localhost:5500");
 
 const API = `${API_HOST}/api`;
 const CREATE_ENDPOINT = `${API}/users`; 
