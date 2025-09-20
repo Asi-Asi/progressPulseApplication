@@ -1,4 +1,4 @@
-import {ScrollView, View} from 'react-native';
+import {ScrollView, View, TouchableOpacity, Text} from 'react-native';
 
 import AppLogo from "../assets/components/ui/AppLogo"; 
 
@@ -26,7 +26,7 @@ export default function Login() {
             headerTitleAlign: "left",
             headerStyle: { backgroundColor: "#FDFBFA" },
           }}
-          /> 
+        /> 
         {/* כותרת */}
         <LoginHeader/>
 
@@ -34,6 +34,13 @@ export default function Login() {
         <LoginForm/>  
 
         <LoginFooter/>
+
+        <TouchableOpacity onPress={() => router.push('/plan')}>
+          <Text>Go to Plan</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/tracking')}>
+          <Text>Go to Tracking</Text>
+        </TouchableOpacity>
 
       </View>
     </ScrollView>

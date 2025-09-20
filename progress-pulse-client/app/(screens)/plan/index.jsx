@@ -13,16 +13,7 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePlanDraft } from '../../../assets/lib/planDraft';
-
-const COLORS = {
-  bg: '#1E1E1E',
-  text: '#F4F4F4',
-  primary: '#FFD100',
-  cta: '#FF5733',
-  card: '#333533',
-  divider: '#000000',
-  muted: '#AAAAAA',
-};
+import AppLogo from "../../../assets/components/ui/AppLogo";
 
 export default function BuildWorkoutPlanScreen() {
   const router = useRouter();
@@ -51,59 +42,56 @@ export default function BuildWorkoutPlanScreen() {
   };
 
   return (
-    <View className="flex-1" style={{ backgroundColor: COLORS.bg }}>
+    <View className="flex-1 bg-bg">
+      {/* we still keep Stack for default header styling */}
       <Stack.Screen
         options={{
-          title: 'Build Workout Plan',
-          headerStyle: { backgroundColor: COLORS.bg },
-          headerTintColor: COLORS.primary,
-          headerTitleStyle: { fontWeight: 'bold', fontSize: 22 },
+          headerTitle: () => <AppLogo/>, 
+          headerTitleAlign: "left",
+          headerStyle: { backgroundColor: "#FDFBFA" },
         }}
       />
 
-      {/* One master scroll for the entire page */}
+      {/* Master scroll */}
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {/* Top controls: Finish Plan / Edit Plan */}
-        <View className="px-4 pt-4">
+        <View className="px-5 pt-5">
+          <Text className="text-text text-2xl font-extrabold">Build Workout Plan</Text>
+          <Text className="text-muted mt-1">Create days, add exercises, and lock when ready.</Text>
+        </View>
+
+        {/* Top controls */}
+        <View className="px-5 pt-4">
           <View className="flex-row items-center justify-between">
-            <Text className="font-bold" style={{ color: COLORS.text, fontSize: 20 }}>
-              Current Plan
-            </Text>
+            <Text className="text-text font-bold text-lg">Current Plan</Text>
 
             <View className="flex-row items-center gap-2">
               {!planLocked && canFinishPlan ? (
                 <TouchableOpacity
                   onPress={actions.lockPlan}
-                  className="rounded-xl px-3 py-2"
-                  style={{ backgroundColor: COLORS.primary }}
+                  className="rounded-xl px-3 py-2 bg-primary"
                 >
-                  <Text className="font-bold" style={{ color: '#1E1E1E' }}>
-                    Finish Plan
-                  </Text>
+                  <Text className="text-onPrimary font-bold">Finish Plan</Text>
                 </TouchableOpacity>
               ) : planLocked ? (
                 <TouchableOpacity
                   onPress={actions.unlockPlan}
-                  className="rounded-xl px-3 py-2"
-                  style={{ backgroundColor: COLORS.card }}
+                  className="rounded-xl px-3 py-2 bg-card"
                 >
-                  <Text className="font-bold" style={{ color: COLORS.text }}>
-                    Edit Plan
-                  </Text>
+                  <Text className="text-text font-bold">Edit Plan</Text>
                 </TouchableOpacity>
               ) : null}
 
               <TouchableOpacity
                 onPress={onPressPlus}
-                className="rounded-full p-3"
-                style={{ backgroundColor: COLORS.cta }}
+                className="rounded-full p-3 bg-primary"
                 accessibilityLabel="Start building plan"
               >
-                <MaterialCommunityIcons name="plus" size={24} color={COLORS.text} />
+                {/* Icons don't inherit Tailwind color; pass hex that matches `text` */}
+                <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
@@ -113,7 +101,7 @@ export default function BuildWorkoutPlanScreen() {
           <EmptyState onPressPlus={onPressPlus} />
         ) : (
           <>
-            {/* Days grid (not scrollable; master ScrollView handles scrolling) */}
+            {/* Days grid */}
             <FlatList
               data={days}
               keyExtractor={(item) => String(item.id)}
@@ -132,37 +120,29 @@ export default function BuildWorkoutPlanScreen() {
 
             {/* Selected day panel */}
             {selectedDay && (
-              <View className="rounded-t-2xl px-4 pb-4" style={{ backgroundColor: COLORS.card }}>
+              <View className="bg-card rounded-t-2xl px-4 pb-4">
                 <View className="flex-row items-center justify-between pt-3 pb-2">
-                  <Text className="font-bold" style={{ color: COLORS.text, fontSize: 18 }}>
+                  <Text className="text-text font-bold text-lg">
                     {selectedDay.name} — Exercises
                   </Text>
 
                   <View className="flex-row gap-2">
-                    {/* Finish/Edit Day */}
                     {!planLocked && !dayLocked && selectedDay.exercises.length > 0 ? (
                       <TouchableOpacity
                         onPress={() => actions.lockDay(selectedDay.id)}
-                        className="rounded-xl px-3 py-2"
-                        style={{ backgroundColor: COLORS.primary }}
+                        className="rounded-xl px-3 py-2 bg-primary"
                       >
-                        <Text className="font-bold" style={{ color: '#1E1E1E' }}>
-                          Finish Day
-                        </Text>
+                        <Text className="text-onPrimary font-bold">Finish Day</Text>
                       </TouchableOpacity>
                     ) : !planLocked && dayLocked ? (
                       <TouchableOpacity
                         onPress={() => actions.unlockDay(selectedDay.id)}
-                        className="rounded-xl px-3 py-2"
-                        style={{ backgroundColor: COLORS.bg }}
+                        className="rounded-xl px-3 py-2 bg-bg border border-border"
                       >
-                        <Text className="font-bold" style={{ color: COLORS.text }}>
-                          Edit Day
-                        </Text>
+                        <Text className="text-text font-bold">Edit Day</Text>
                       </TouchableOpacity>
                     ) : null}
 
-                    {/* Add Exercise (disabled when locked) */}
                     <TouchableOpacity
                       disabled={!canEditSelectedDay}
                       onPress={() =>
@@ -171,26 +151,17 @@ export default function BuildWorkoutPlanScreen() {
                           params: { targetDayId: String(selectedDayId) },
                         })
                       }
-                      className="rounded-xl px-3 py-2"
-                      style={{
-                        backgroundColor: COLORS.primary,
-                        opacity: canEditSelectedDay ? 1 : 0.5,
-                      }}
+                      className={`rounded-xl px-3 py-2 bg-primary ${canEditSelectedDay ? 'opacity-100' : 'opacity-50'}`}
                     >
-                      <Text className="font-bold" style={{ color: '#1E1E1E' }}>
-                        Add Exercise
-                      </Text>
+                      <Text className="text-onPrimary font-bold">Add Exercise</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {selectedDay.exercises.length === 0 ? (
-                  <Text style={{ color: COLORS.muted }}>
-                    No exercises for this day — tap “Add Exercise”
-                  </Text>
+                  <Text className="text-muted">No exercises for this day — tap “Add Exercise”.</Text>
                 ) : (
-                  // Not a ScrollView: keep a single page scroller
-                  <View style={{ marginTop: 8 }}>
+                  <View className="mt-2">
                     {selectedDay.exercises.map((ex, idx) => (
                       <ExerciseRow
                         key={`${ex.id}-${idx}`}
@@ -213,28 +184,25 @@ export default function BuildWorkoutPlanScreen() {
 
       {/* Modal: how many days? */}
       <Modal visible={askDaysVisible} transparent animationType="fade">
-        <View
-          className="flex-1 items-center justify-center px-6"
-          style={{ backgroundColor: 'rgba(0,0,0,0.6)' }}
-        >
-          <View className="w-full rounded-2xl p-5" style={{ backgroundColor: COLORS.card }}>
-            <Text className="text-center font-bold mb-4" style={{ color: COLORS.text, fontSize: 18 }}>
+        <View className="flex-1 items-center justify-center px-6 bg-black/60">
+          <View className="w-full rounded-2xl p-5 bg-card">
+            <Text className="text-text text-center font-bold mb-4 text-lg">
               How many days do you train per week?
             </Text>
 
             <View className="flex-row flex-wrap items-center justify-center gap-2 mb-4">
-              {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-                <Pressable
-                  key={n}
-                  onPress={() => setDaysCountDraft(String(n))}
-                  className={`px-3 py-2 rounded-xl ${
-                    daysCountDraft === String(n) ? 'opacity-100' : 'opacity-70'
-                  }`}
-                  style={{ backgroundColor: daysCountDraft === String(n) ? COLORS.primary : COLORS.bg }}
-                >
-                  <Text style={{ color: daysCountDraft === String(n) ? '#1E1E1E' : COLORS.text }}>{n}</Text>
-                </Pressable>
-              ))}
+              {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+                const picked = daysCountDraft === String(n);
+                return (
+                  <Pressable
+                    key={n}
+                    onPress={() => setDaysCountDraft(String(n))}
+                    className={`px-3 py-2 rounded-xl ${picked ? 'bg-primary' : 'bg-bg border border-border'} ${picked ? '' : 'opacity-80'}`}
+                  >
+                    <Text className={`${picked ? 'text-onPrimary' : 'text-text'}`}>{n}</Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <TextInput
@@ -242,29 +210,26 @@ export default function BuildWorkoutPlanScreen() {
               onChangeText={setDaysCountDraft}
               placeholder="1-7"
               keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}
-              className="rounded-xl px-4 py-3 mb-4"
-              placeholderTextColor={COLORS.muted}
-              style={{ backgroundColor: COLORS.bg, color: COLORS.text }}
+              className="rounded-xl px-4 py-3 mb-4 bg-bg text-text border border-border"
+              placeholderTextColor="#888888" // muted
             />
 
             <View className="flex-row gap-3">
               <TouchableOpacity
-                className="flex-1 items-center rounded-xl px-4 py-3"
-                style={{ backgroundColor: COLORS.primary }}
+                className="flex-1 items-center rounded-xl px-4 py-3 bg-primary"
                 onPress={() => {
                   createDays(daysCountDraft);
                   setAskDaysVisible(false);
                 }}
               >
-                <Text className="font-bold" style={{ color: '#1E1E1E' }}>Start</Text>
+                <Text className="text-onPrimary font-bold">Start</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                className="flex-1 items-center rounded-xl px-4 py-3"
-                style={{ backgroundColor: COLORS.bg }}
+                className="flex-1 items-center rounded-xl px-4 py-3 bg-bg border border-border"
                 onPress={() => setAskDaysVisible(false)}
               >
-                <Text className="font-bold" style={{ color: COLORS.text }}>Cancel</Text>
+                <Text className="text-text font-bold">Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -277,22 +242,20 @@ export default function BuildWorkoutPlanScreen() {
 /** Components **/
 
 function EmptyState({ onPressPlus }) {
-  // Not flex-1 inside a ScrollView; use padding to center-ish
   return (
     <View className="items-center justify-center px-8 py-24">
-      <MaterialCommunityIcons name="calendar-plus" size={52} color={COLORS.primary} />
-      <Text className="text-center mt-3" style={{ color: COLORS.text, fontSize: 18, fontWeight: '700' }}>
+      <MaterialCommunityIcons name="calendar-plus" size={52} color="#007BFF" />
+      <Text className="text-text text-center mt-3 font-extrabold text-lg">
         No active plan yet
       </Text>
-      <Text className="text-center mt-1" style={{ color: COLORS.muted }}>
+      <Text className="text-muted text-center mt-1">
         Tap the + button to choose training days and start building
       </Text>
       <TouchableOpacity
         onPress={onPressPlus}
-        className="mt-5 rounded-2xl px-5 py-3"
-        style={{ backgroundColor: COLORS.primary }}
+        className="mt-5 rounded-2xl px-5 py-3 bg-primary"
       >
-        <Text className="font-bold" style={{ color: '#1E1E1E' }}>Start now</Text>
+        <Text className="text-onPrimary font-bold">Start now</Text>
       </TouchableOpacity>
     </View>
   );
@@ -302,25 +265,24 @@ function DayCard({ day, isSelected, onPress }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-1 rounded-2xl p-4"
-      style={{ backgroundColor: COLORS.card }}
+      className="flex-1 rounded-2xl p-4 bg-card"
       activeOpacity={0.9}
     >
       <View className="flex-row items-center justify-between">
-        <Text className="font-bold" style={{ color: COLORS.text, fontSize: 18 }}>{day.name}</Text>
+        <Text className="text-text font-bold text-lg">{day.name}</Text>
         <View className="flex-row items-center gap-2">
-          {day.locked && <MaterialCommunityIcons name="lock" size={16} color={COLORS.primary} />}
+          {day.locked && <MaterialCommunityIcons name="lock" size={16} color="#007BFF" />}
           {isSelected && (
-            <View className="rounded-full px-2 py-1" style={{ backgroundColor: COLORS.primary }}>
-              <Text className="font-bold" style={{ color: '#1E1E1E', fontSize: 12 }}>Selected</Text>
+            <View className="rounded-full px-2 py-1 bg-primary">
+              <Text className="text-onPrimary font-bold text-[12px]">Selected</Text>
             </View>
           )}
         </View>
       </View>
 
       <View className="flex-row items-center gap-2 mt-3">
-        <MaterialCommunityIcons name="dumbbell" size={18} color={COLORS.primary} />
-        <Text style={{ color: COLORS.muted }}>
+        <MaterialCommunityIcons name="dumbbell" size={18} color="#007BFF" />
+        <Text className="text-muted">
           {day.exercises.length} exercises {day.locked ? '• locked' : ''}
         </Text>
       </View>
@@ -330,66 +292,57 @@ function DayCard({ day, isSelected, onPress }) {
 
 function ExerciseRow({ exercise, index, sets = 1, editable, onInc, onDec, onRemove }) {
   const MIN_SETS = 1;
-  const MAX_SETS = 20; // optional, matches the clamp in planDraft
+  const MAX_SETS = 20;
   const decDisabled = !editable || sets <= MIN_SETS;
   const incDisabled = !editable || sets >= MAX_SETS;
 
   return (
-    <View
-      className="flex-row items-center rounded-xl px-4 py-3 mb-2"
-      style={{ backgroundColor: '#2A2B2A' }}
-    >
-      {/* Left: exercise info (flexible) */}
-      <View className="flex-row items-center gap-3 pr-3" style={{ flex: 1, minWidth: 0 }}>
-        <MaterialCommunityIcons name="dumbbell" size={20} color={COLORS.primary} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: COLORS.text, fontWeight: '600' }}>
+    <View className="flex-row items-center rounded-xl px-4 py-3 mb-2 bg-card">
+      {/* Left: exercise info */}
+      <View className="flex-row items-center gap-3 pr-3 flex-1 min-w-0">
+        <MaterialCommunityIcons name="dumbbell" size={20} color="#007BFF" />
+        <View className="flex-1 min-w-0">
+          <Text numberOfLines={1} ellipsizeMode="tail" className="text-text font-semibold">
             {exercise.name}
           </Text>
-          <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: COLORS.muted, fontSize: 12 }}>
+          <Text numberOfLines={1} ellipsizeMode="tail" className="text-muted text-[12px]">
             {exercise.muscle}
           </Text>
         </View>
       </View>
 
-      {/* Middle: Remove (fixed width keeps position) */}
+      {/* Middle: Remove */}
       <TouchableOpacity
         disabled={!editable}
         onPress={onRemove}
-        className="rounded-xl px-3 py-2 items-center justify-center"
-        style={{
-          backgroundColor: COLORS.bg,
-          opacity: editable ? 1 : 0.5,
-          width: 92, // fixed width
-        }}
+        className={`rounded-xl px-3 py-2 items-center justify-center bg-bg border border-border ${editable ? 'opacity-100' : 'opacity-50'}`}
+        style={{ width: 92 }}
       >
-        <Text className="font-bold" style={{ color: COLORS.text }}>Remove</Text>
+        <Text className="text-text font-bold">Remove</Text>
       </TouchableOpacity>
 
-      {/* Right: sets stepper (fixed width) */}
+      {/* Right: sets stepper */}
       <View className="items-center" style={{ width: 44 }}>
         <TouchableOpacity
           disabled={incDisabled}
           onPress={onInc}
-          className="rounded-md px-2 py-1 mb-1 items-center justify-center"
-          style={{ backgroundColor: COLORS.card, opacity: incDisabled ? 0.4 : 1 }}
+          className={`rounded-md px-2 py-1 mb-1 items-center justify-center bg-card ${incDisabled ? 'opacity-40' : 'opacity-100'}`}
           accessibilityLabel="Increase sets"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <MaterialCommunityIcons name="chevron-up" size={20} color={COLORS.primary} />
+          <MaterialCommunityIcons name="chevron-up" size={20} color="#007BFF" />
         </TouchableOpacity>
 
-        <Text style={{ color: COLORS.text, fontWeight: '700' }}>{sets}</Text>
+        <Text className="text-text font-extrabold">{sets}</Text>
 
         <TouchableOpacity
           disabled={decDisabled}
           onPress={onDec}
-          className="rounded-md px-2 py-1 mt-1 items-center justify-center"
-          style={{ backgroundColor: COLORS.card, opacity: decDisabled ? 0.4 : 1 }}
+          className={`rounded-md px-2 py-1 mt-1 items-center justify-center bg-card ${decDisabled ? 'opacity-40' : 'opacity-100'}`}
           accessibilityLabel="Decrease sets"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <MaterialCommunityIcons name="chevron-down" size={20} color={COLORS.primary} />
+          <MaterialCommunityIcons name="chevron-down" size={20} color="#007BFF" />
         </TouchableOpacity>
       </View>
     </View>

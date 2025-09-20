@@ -1,10 +1,20 @@
 // app/TrackWorkout.jsx
 import React, { useMemo, useState } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Alert, Platform,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Alert,
+  Platform,
 } from "react-native";
 import { Stack } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+import AppLogo from "../../../assets/components/ui/AppLogo"; 
+
 
 /* === sample data — replace with your real plan === */
 const samplePlan = {
@@ -145,8 +155,6 @@ export default function TrackWorkout() {
       summary: { totalSets, completedSets, totalVolume },
     };
 
-    // TODO: POST to your API here, then clear the log on success.
-
     console.log("Workout payload:", payload);
     safeAlert(
       "Workout finished!",
@@ -158,16 +166,33 @@ export default function TrackWorkout() {
 
   const finishDisabled = Object.values(log).length === 0;
 
+
+
+  // --- column sizing (keeps names from being squeezed) ---
+  const COL = {
+    EX_MIN: 240, // Exercise column minimum (allows full names to wrap)
+    SET_W: 72,   // "Set" / "Sets"
+    NUM_W: 96,   // "Reps" / "Weight"
+    BTN_W: 48,   // trash button
+  };
+
   return (
-    <View className="flex-1 bg-[#1E1E1E]">
+    <View className="flex-1 bg-bg">
       <Stack.Screen
         options={{
-          title: `Plan #${plan.id}`,
-          headerStyle: { backgroundColor: "#1E1E1E" },
-          headerTintColor: "#FFD100",
-          headerTitleStyle: { fontWeight: "bold", fontSize: 22 },
+          headerTitle: () => <AppLogo/>, 
+          headerTitleAlign: "left",
+          headerStyle: { backgroundColor: "#FDFBFA" },
         }}
       />
+
+      {/* in-page title */}
+      <View className="px-4 pt-5">
+        <Text className="text-text text-2xl font-extrabold">Track Workout</Text>
+        <Text className="text-muted mt-1">
+          Log sets and weights for today’s session.
+        </Text>
+      </View>
 
       {/* ===== compact day picker ===== */}
       <View className="px-4 pt-3">
@@ -180,10 +205,14 @@ export default function TrackWorkout() {
                   key={d.id}
                   onPress={() => setSelectedDayId(d.id)}
                   className={`h-24 w-24 rounded-2xl border items-center justify-center ${
-                    active ? "bg-[#FFD100] border-[#FFD100]" : "bg-transparent border-[#333533]"
+                    active ? "bg-primary border-primary" : "bg-transparent border-border"
                   }`}
                 >
-                  <Text className={`text-center px-1 ${active ? "text-[#0B0F12] font-extrabold" : "text-[#F4F4F4]"}`}>
+                  <Text
+                    className={`text-center px-1 ${
+                      active ? "text-onPrimary font-extrabold" : "text-text"
+                    }`}
+                  >
                     {d.name}
                   </Text>
                 </TouchableOpacity>
@@ -195,143 +224,206 @@ export default function TrackWorkout() {
 
       <ScrollView className="flex-1 px-4">
         {/* ===== summary table ===== */}
-        <View className="mt-2 bg-[#2B2B2B] rounded-xl overflow-hidden border border-[#000]/40">
+        <View className="mt-2 bg-card rounded-xl overflow-hidden border border-border">
           <View className="flex-row">
-            <View className="flex-1 border-r border-[#000]/40 px-3 py-2">
-              <Text className="text-[#F4F4F4] font-bold underline">Exercises</Text>
+            <View className="flex-1 border-r border-border px-3 py-2">
+              <Text className="text-text font-bold underline">Exercise</Text>
             </View>
-            <View className="w-20 border-r border-[#000]/40 items-center px-3 py-2">
-              <Text className="text-[#F4F4F4] font-bold">Sets</Text>
+            <View className="w-20 border-r border-border items-center px-3 py-2">
+              <Text className="text-text font-bold">Sets</Text>
             </View>
             <View className="w-28 items-center px-3 py-2">
-              <Text className="text-[#F4F4F4] font-bold">Last Max (kg)</Text>
+              <Text className="text-text font-bold">Max (kg)</Text>
             </View>
           </View>
 
-          {currentDay?.exercises?.map((ex) => (
-            <View key={ex.id} className="flex-row border-t border-[#000]/40">
-              <View className="flex-1 px-3 py-3 border-r border-[#000]/40">
-                <Text className="text-[#F4F4F4]">{ex.name}</Text>
+          {(currentDay?.exercises ?? []).map((ex) => (
+            <View key={ex.id} className="flex-row border-t border-border">
+              <View className="flex-1 px-3 py-3 border-r border-border">
+                <Text className="text-text">{ex.name}</Text>
               </View>
-              <View className="w-20 items-center justify-center border-r border-[#000]/40">
-                <Text className="text-[#CFCFCF]">#{ex.sets}</Text>
+              <View className="w-20 items-center justify-center border-r border-border">
+                <Text className="text-muted">#{ex.sets}</Text>
               </View>
               <View className="w-28 items-center justify-center">
-                <Text className="text-[#F4F4F4] font-bold">{getEffectiveLastMax(ex)}</Text>
+                <Text className="text-text font-bold">{getEffectiveLastMax(ex)}</Text>
               </View>
             </View>
           ))}
         </View>
 
         {/* ===== add exercise + log table ===== */}
-        <View className="mt-4 bg-[#2B2B2B] rounded-xl border border-[#000]/40">
+        <View className="mt-4 bg-card rounded-xl border border-border">
           <View className="flex-row items-center justify-between px-4 py-3">
-            <Text className="text-[#F4F4F4] font-extrabold">Add exercise</Text>
-            <TouchableOpacity onPress={() => setPickerOpen(true)} className="p-2 rounded-lg bg-[#333533]">
-              <MaterialCommunityIcons name="plus" size={20} color="#FFD100" />
+            <Text className="text-text font-extrabold">Add exercise</Text>
+            <TouchableOpacity
+              onPress={() => setPickerOpen(true)}
+              className="p-2 rounded-lg bg-field border border-fieldBorder"
+            >
+              <MaterialCommunityIcons name="plus" size={20} color="#007BFF" />
             </TouchableOpacity>
           </View>
 
-          <View className="border-t border-[#000]/40">
-            {/* header */}
-            <View className="flex-row">
-              <View className="flex-1 border-r border-[#000]/40 px-3 py-2">
-                <Text className="text-[#F4F4F4] font-bold">Exercises</Text>
-              </View>
-              <View className="w-20 border-r border-[#000]/40 items-center px-3 py-2">
-                <Text className="text-[#F4F4F4] font-bold">Set</Text>
-              </View>
-              <View className="w-24 border-r border-[#000]/40 items-center px-3 py-2">
-                <Text className="text-[#F4F4F4] font-bold">Reps</Text>
-              </View>
-              <View className="w-24 border-r border-[#000]/40 items-center px-3 py-2">
-                <Text className="text-[#F4F4F4] font-bold">Weight</Text>
-              </View>
-              <View className="w-12 items-center px-1 py-2">
-                <Text className="text-[#F4F4F4] font-bold"> </Text>
-              </View>
+          {/* swipe hint */}
+          <View className="px-4 pb-1 -mt-2">
+            <View className="self-start flex-row items-center gap-1.5 px-2 py-1 rounded-full bg-field border border-fieldBorder">
+              <MaterialCommunityIcons name="gesture-swipe-horizontal" size={14} color="#667085" />
+              <Text className="text-[12px] text-muted">Swipe left/right to see all columns</Text>
             </View>
+          </View>
 
-            {Object.values(log).length === 0 ? (
-              <Text className="text-[#9AA0A6] px-4 py-3">No exercises added yet.</Text>
-            ) : (
-              Object.values(log).map(({ exercise, sets }) => (
-                <View key={exercise.id} className="border-t border-[#000]/40">
-                  {sets.map((s, idx) => (
-                    <View key={idx} className="flex-row items-stretch">
-                      {idx === 0 ? (
-                        <View className="flex-1 px-3 py-3 border-r border-[#000]/40">
-                          <Text className="text-[#F4F4F4]">{exercise.name}</Text>
-                          <TouchableOpacity
-                            onPress={() => removeExerciseFromLog(exercise.id)}
-                            className="mt-2 self-start px-2 py-1 rounded-lg bg-[#3b3b3b]"
+          <View className="border-t border-border">
+            {/* full log table is horizontally scrollable */}
+            <ScrollView horizontal showsHorizontalScrollIndicator>
+              <View
+                style={{
+                  minWidth: COL.EX_MIN + COL.SET_W + COL.NUM_W + COL.NUM_W + COL.BTN_W,
+                }}
+              >
+                {/* header */}
+                <View className="flex-row bg-field border-b border-fieldBorder">
+                  <View
+                    className="px-3 py-2 border-r border-fieldBorder"
+                    style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}
+                  >
+                    <Text className="text-text font-bold">Exercise</Text>
+                  </View>
+                  <View
+                    className="items-center px-3 py-2 border-r border-fieldBorder"
+                    style={{ width: COL.SET_W }}
+                  >
+                    <Text className="text-text font-bold">Set</Text>
+                  </View>
+                  <View
+                    className="items-center px-3 py-2 border-r border-fieldBorder"
+                    style={{ width: COL.NUM_W }}
+                  >
+                    <Text className="text-text font-bold">Reps</Text>
+                  </View>
+                  <View
+                    className="items-center px-3 py-2 border-r border-fieldBorder"
+                    style={{ width: COL.NUM_W }}
+                  >
+                    <Text className="text-text font-bold">Weight</Text>
+                  </View>
+                  <View className="items-center px-1 py-2" style={{ width: COL.BTN_W }} />
+                </View>
+
+                {/* rows */}
+                {Object.values(log).length === 0 ? (
+                  <Text className="text-muted px-4 py-3">No exercises added yet.</Text>
+                ) : (
+                  Object.values(log).map(({ exercise, sets }) => (
+                    <View key={exercise.id} className="border-t border-border">
+                      {sets.map((s, idx) => (
+                        <View key={idx} className="flex-row items-stretch">
+                          {/* Exercise name (wraps to show full name) */}
+                          {idx === 0 ? (
+                            <View
+                              className="px-3 py-3 border-r border-border"
+                              style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}
+                            >
+                              <Text
+                                className="text-text"
+                                style={{ flexShrink: 1, flexWrap: "wrap", lineHeight: 18 }}
+                              >
+                                {exercise.name}
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() => removeExerciseFromLog(exercise.id)}
+                                className="mt-2 self-start px-2 py-1 rounded-lg bg-field border border-fieldBorder"
+                              >
+                                <Text className="text-text text-xs">remove</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : (
+                            <View
+                              className="border-r border-border"
+                              style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}
+                            />
+                          )}
+
+                          <View
+                            className="items-center justify-center border-r border-border"
+                            style={{ width: COL.SET_W }}
                           >
-                            <Text className="text-[#F4F4F4] text-xs">remove</Text>
-                          </TouchableOpacity>
+                            <Text className="text-text">set {idx + 1}</Text>
+                          </View>
+
+                          <View
+                            className="justify-center border-r border-border px-2 py-2"
+                            style={{ width: COL.NUM_W }}
+                          >
+                            <TextInput
+                              value={String(s.reps ?? "")}
+                              onChangeText={(v) =>
+                                updateSet(exercise.id, idx, "reps", v.replace(/[^0-9]/g, ""))
+                              }
+                              keyboardType="numeric"
+                              inputMode="numeric"
+                              placeholder="0"
+                              placeholderTextColor="#667085"
+                              className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-10"
+                            />
+                          </View>
+
+                          <View
+                            className="justify-center border-r border-border px-2 py-2"
+                            style={{ width: COL.NUM_W }}
+                          >
+                            <TextInput
+                              value={String(s.weight ?? "")}
+                              onChangeText={(v) =>
+                                updateSet(exercise.id, idx, "weight", v.replace(/[^0-9.]/g, ""))
+                              }
+                              keyboardType="numeric"
+                              inputMode="decimal"
+                              placeholder="0"
+                              placeholderTextColor="#667085"
+                              className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-10"
+                            />
+                          </View>
+
+                          <View
+                            className="items-center justify-center px-1"
+                            style={{ width: COL.BTN_W }}
+                          >
+                            <TouchableOpacity
+                              onPress={() => removeSet(exercise.id, idx)}
+                              className="px-2 py-1 rounded-md bg-field border border-fieldBorder"
+                              accessibilityLabel={`Remove set ${idx + 1}`}
+                            >
+                              <MaterialCommunityIcons
+                                name="trash-can-outline"
+                                size={16}
+                                color="#2C2C2C"
+                              />
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                      ) : (
-                        <View className="flex-1 border-r border-[#000]/40" />
-                      )}
+                      ))}
 
-                      <View className="w-20 items-center justify-center border-r border-[#000]/40">
-                        <Text className="text-[#F4F4F4]">set {idx + 1}</Text>
-                      </View>
-
-                      <View className="w-24 items-stretch justify-center border-r border-[#000]/40 px-2 py-2">
-                        <TextInput
-                          value={String(s.reps ?? "")}
-                          onChangeText={(v) =>
-                            updateSet(exercise.id, idx, "reps", v.replace(/[^0-9]/g, ""))
-                          }
-                          keyboardType="numeric"
-                          inputMode="numeric"
-                          placeholder="0"
-                          placeholderTextColor="#666"
-                          className="bg-[#1F2937] text-white rounded-lg px-3 h-10"
+                      <View className="flex-row border-t border-border">
+                        <View
+                          className="border-r border-border"
+                          style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}
                         />
-                      </View>
-
-                      <View className="w-24 items-stretch justify-center border-r border-[#000]/40 px-2 py-2">
-                        <TextInput
-                          value={String(s.weight ?? "")}
-                          onChangeText={(v) =>
-                            updateSet(exercise.id, idx, "weight", v.replace(/[^0-9.]/g, ""))
-                          }
-                          keyboardType="numeric"
-                          inputMode="decimal"
-                          placeholder="0"
-                          placeholderTextColor="#666"
-                          className="bg-[#1F2937] text-white rounded-lg px-3 h-10"
-                        />
-                      </View>
-
-                      <View className="w-12 items-center justify-center px-1">
                         <TouchableOpacity
-                          onPress={() => removeSet(exercise.id, idx)}
-                          className="px-2 py-1 rounded-md bg-[#3b3b3b]"
-                          accessibilityLabel={`Remove set ${idx + 1}`}
+                          onPress={() => addSet(exercise.id)}
+                          className="items-center justify-center border-r border-border"
+                          style={{ width: COL.SET_W }}
                         >
-                          <MaterialCommunityIcons name="trash-can-outline" size={16} color="#F4F4F4" />
+                          <Text className="text-primary font-bold">+ set</Text>
                         </TouchableOpacity>
+                        <View className="border-r border-border" style={{ width: COL.NUM_W }} />
+                        <View className="border-r border-border" style={{ width: COL.NUM_W }} />
+                        <View style={{ width: COL.BTN_W }} />
                       </View>
                     </View>
-                  ))}
-
-                  <View className="flex-row border-t border-[#000]/40">
-                    <View className="flex-1 border-r border-[#000]/40" />
-                    <TouchableOpacity
-                      onPress={() => addSet(exercise.id)}
-                      className="w-20 items-center justify-center border-r border-[#000]/40"
-                    >
-                      <Text className="text-[#F4F4F4]">+ set</Text>
-                    </TouchableOpacity>
-                    <View className="w-24 border-r border-[#000]/40" />
-                    <View className="w-24 border-r border-[#000]/40" />
-                    <View className="w-12" />
-                  </View>
-                </View>
-              ))
-            )}
+                  ))
+                )}
+              </View>
+            </ScrollView>
           </View>
         </View>
 
@@ -344,57 +436,62 @@ export default function TrackWorkout() {
           disabled={finishDisabled}
           onPress={handleFinishWorkout}
           className={`h-12 rounded-xl items-center justify-center ${
-            finishDisabled ? "bg-[#3b3b3b] opacity-60" : "bg-[#FFD100]"
+            finishDisabled ? "bg-card opacity-60" : "bg-primary"
           }`}
         >
-          <Text className={`${finishDisabled ? "text-[#CFCFCF]" : "text-[#0B0F12] font-extrabold"}`}>
+          <Text className={`${finishDisabled ? "text-muted" : "text-onPrimary font-extrabold"}`}>
             Finish Workout
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* ===== Exercise Picker ===== */}
-      <Modal visible={pickerOpen} animationType="fade" transparent onRequestClose={() => setPickerOpen(false)}>
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-[#2B2B2B] rounded-t-2xl p-4">
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-[#FFD100] text-lg font-extrabold">Pick exercise</Text>
-              <TouchableOpacity onPress={() => setPickerOpen(false)} className="px-3 py-1 rounded-lg bg-[#333]">
-                <Text className="text-white font-bold">Close</Text>
+      {/* ===== Exercise Picker (centered dialog) ===== */}
+      <Modal
+        visible={pickerOpen}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setPickerOpen(false)}
+      >
+        <View className="flex-1 bg-black/60 items-center justify-center px-4">
+          <View className="w-full max-w-[560px] rounded-2xl bg-card border border-border p-4">
+            <View className="flex-row items-center justify-between mb-3">
+              <Text className="text-primary text-lg font-extrabold">
+                Pick exercise — {currentDay?.name}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setPickerOpen(false)}
+                className="px-3 py-1 rounded-lg bg-field border border-fieldBorder"
+              >
+                <Text className="text-text font-bold">Close</Text>
               </TouchableOpacity>
             </View>
 
-            <ScrollView className="max-h-[60vh]">
-              {plan.days.map((day) => (
-                <View key={day.id} className="mb-3">
-                  <Text className="text-[#CFCFCF] mb-1">{day.name}</Text>
-                  <View className="bg-[#1F1F1F] rounded-xl overflow-hidden border border-[#000]/40">
-                    {day.exercises.map((ex, i) => {
-                      const disabled = !!log[ex.id];
-                      return (
-                        <TouchableOpacity
-                          key={ex.id}
-                          disabled={disabled}
-                          onPress={() => {
-                            addExerciseToLog(ex);
-                            setPickerOpen(false);
-                          }}
-                          className={`px-3 py-3 ${i > 0 ? "border-t border-[#000]/40" : ""} ${
-                            disabled ? "opacity-50" : "active:opacity-80"
-                          }`}
-                        >
-                          <View className="flex-row items-center justify-between">
-                            <Text className="text-[#F4F4F4]">{ex.name}</Text>
-                            <Text className="text-[#9AA0A6] text-xs">
-                              planned: {ex.sets} • last max {getEffectiveLastMax(ex)}kg
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ))}
+            <ScrollView className="max-h-[70vh]">
+              <View className="bg-bg rounded-xl overflow-hidden border border-border">
+                {(currentDay?.exercises ?? []).map((ex, i) => {
+                  const disabled = !!log[ex.id];
+                  return (
+                    <TouchableOpacity
+                      key={ex.id}
+                      disabled={disabled}
+                      onPress={() => {
+                        addExerciseToLog(ex);
+                        setPickerOpen(false);
+                      }}
+                      className={`px-3 py-3 ${i > 0 ? "border-t border-border" : ""} ${
+                        disabled ? "opacity-50" : "active:opacity-80"
+                      }`}
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-text">{ex.name}</Text>
+                        <Text className="text-muted text-xs">
+                          planned: {ex.sets} • max {getEffectiveLastMax(ex)}kg
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </ScrollView>
           </View>
         </View>
