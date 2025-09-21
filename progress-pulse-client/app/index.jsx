@@ -41,6 +41,12 @@ export default function Login() {
         <TouchableOpacity onPress={() => router.push('/tracking')}>
           <Text>Go to Tracking</Text>
         </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/tracking/trainingHistory')}>
+          <Text>Go to Training History</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/coach')}>
+          <Text>Go to Coach</Text>
+        </TouchableOpacity>
 
       </View>
     </ScrollView>

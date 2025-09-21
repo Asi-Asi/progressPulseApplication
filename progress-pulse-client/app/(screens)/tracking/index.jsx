@@ -10,11 +10,11 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import AppLogo from "../../../assets/components/ui/AppLogo"; 
-
+import AppLogo from "../../../assets/components/ui/AppLogo";
+import BookIcon from "../../../assets/images/svg/book.svg"; // <-- header icon
 
 /* === sample data — replace with your real plan === */
 const samplePlan = {
@@ -62,6 +62,8 @@ const safeAlert = (title, msg = "") => {
 };
 
 export default function TrackWorkout() {
+  const router = useRouter();
+
   const [plan] = useState(samplePlan);
   const [selectedDayId, setSelectedDayId] = useState(plan.days[0]?.id);
 
@@ -166,8 +168,6 @@ export default function TrackWorkout() {
 
   const finishDisabled = Object.values(log).length === 0;
 
-
-
   // --- column sizing (keeps names from being squeezed) ---
   const COL = {
     EX_MIN: 240, // Exercise column minimum (allows full names to wrap)
@@ -180,9 +180,22 @@ export default function TrackWorkout() {
     <View className="flex-1 bg-bg">
       <Stack.Screen
         options={{
-          headerTitle: () => <AppLogo/>, 
+          headerTitle: () => <AppLogo />,
           headerTitleAlign: "left",
           headerStyle: { backgroundColor: "#FDFBFA" },
+
+          // Top-right Training History icon button
+          headerRight: () => (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Open training history"
+              onPress={() => router.push("/(screens)/tracking/trainingHistory")}
+              className="mr-2 p-2 rounded-xl bg-field border border-fieldBorder"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <BookIcon width={22} height={22} />
+            </TouchableOpacity>
+          ),
         }}
       />
 

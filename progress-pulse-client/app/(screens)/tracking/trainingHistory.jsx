@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal } from "react-native";
 import { Stack } from "expo-router";
+import AppLogo from "../../../assets/components/ui/AppLogo";
 
 /* ===== Demo data (replace with real API later) ===== */
 const DEMO_WORKOUTS = [
@@ -12,7 +13,7 @@ const DEMO_WORKOUTS = [
     dayId: "day1",
     dayName: "Day 1 – Push",
     summary: { totalSets: 10, completedSets: 10 },
-    entries: [ 
+    entries: [
       {
         exerciseId: "bench",
         name: "Barbell Bench Press",
@@ -106,17 +107,17 @@ const DEMO_WORKOUTS = [
 
 /* ===== Small helper ===== */
 const formatDate = (iso) => {
-const d = new Date(iso);
-    return d.toLocaleDateString("en-US", {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 };
 
 export default function TrainingHistory() {
   const [workouts] = useState(DEMO_WORKOUTS);
-  const [active, setActive] = useState(null); // selected workout for details
+  const [active, setActive] = useState(null);
 
   const sorted = useMemo(
     () =>
@@ -127,23 +128,26 @@ export default function TrainingHistory() {
   );
 
   return (
-    <View className="flex-1 bg-[#1E1E1E]">
+    <View className="flex-1 bg-bg">
       <Stack.Screen
         options={{
-          title: "Training History",
-          headerStyle: { backgroundColor: "#1E1E1E" },
-          headerTintColor: "#FFD100",
-          headerTitleStyle: { fontWeight: "bold", fontSize: 22 },
+          headerTitle: () => <AppLogo />,
+          headerTitleAlign: "left",
+          headerStyle: { backgroundColor: "#FDFBFA" },
         }}
       />
 
+      {/* Page title (the old header text) */}
+      <View className="px-4 pt-5">
+        <Text className="text-text text-2xl font-extrabold">Training History</Text>
+        <Text className="text-muted mt-1">Your finished sessions at a glance.</Text>
+      </View>
+
       <ScrollView className="flex-1 px-4 pt-4">
         {sorted.length === 0 ? (
-          <Text className="text-[#9AA0A6] text-center mt-10">
-            No workouts yet.
-          </Text>
+          <Text className="text-muted text-center mt-10">No workouts yet.</Text>
         ) : (
-          <View className="pb-10 space-y-3">
+          <View className="pb-10 gap-3">
             {sorted.map((w) => {
               const { totalSets, completedSets } = w.summary || {};
               const firstTwo = w.entries.slice(0, 2);
@@ -151,58 +155,50 @@ export default function TrainingHistory() {
                 <TouchableOpacity
                   key={w.id}
                   onPress={() => setActive(w)}
-                  activeOpacity={0.9}
-                  className="bg-[#2B2B2B] rounded-xl border border-[#000]/40 p-4"
+                  activeOpacity={0.92}
+                  className="bg-card rounded-xl border border-border p-4"
                 >
-                  {/* Header: Date + Day name */}
                   <View className="flex-row items-center justify-between">
-                    <Text className="text-[#F4F4F4] font-bold text-base">
+                    <Text className="text-text font-bold text-base">
                       {formatDate(w.date)}
                     </Text>
                     {!!w.dayName && (
-                      <View className="px-3 py-1 rounded-full bg-[#FFD100]">
-                        <Text className="text-[#0B0F12] font-extrabold text-xs">
+                      <View className="px-3 py-1 rounded-full bg-primary">
+                        <Text className="text-onPrimary font-extrabold text-xs">
                           {w.dayName}
                         </Text>
                       </View>
                     )}
                   </View>
 
-                  {/* Summary line (no volume) */}
                   <View className="flex-row gap-4 mt-2">
-                    <Text className="text-[#CFCFCF]">
+                    <Text className="text-muted">
                       Exercises:{" "}
-                      <Text className="text-[#F4F4F4] font-bold">
+                      <Text className="text-text font-bold">
                         {w.entries.length}
                       </Text>
                     </Text>
-                    <Text className="text-[#CFCFCF]">
+                    <Text className="text-muted">
                       Sets:{" "}
-                      <Text className="text-[#F4F4F4] font-bold">
+                      <Text className="text-text font-bold">
                         {completedSets ?? 0}/{totalSets ?? 0}
                       </Text>
                     </Text>
                   </View>
 
-                  {/* Preview of first exercises */}
-                  <View className="mt-3 space-y-1">
+                  <View className="mt-3 gap-1">
                     {firstTwo.map((e) => (
-                      <Text key={e.exerciseId} className="text-[#F4F4F4]">
+                      <Text key={e.exerciseId} className="text-text">
                         • {e.name}{" "}
-                        <Text className="text-[#9AA0A6]">
-                          ({e.sets.length} sets)
-                        </Text>
+                        <Text className="text-muted">({e.sets.length} sets)</Text>
                       </Text>
                     ))}
                     {w.entries.length > 2 && (
-                      <Text className="text-[#9AA0A6]">… and more</Text>
+                      <Text className="text-muted">… and more</Text>
                     )}
                   </View>
 
-                  {/* Hint */}
-                  <Text className="text-[#9AA0A6] mt-3">
-                    Tap to view details
-                  </Text>
+                  <Text className="text-muted mt-3">Tap to view details</Text>
                 </TouchableOpacity>
               );
             })}
@@ -210,69 +206,68 @@ export default function TrainingHistory() {
         )}
       </ScrollView>
 
-      {/* ===== Details modal ===== */}
+      {/* Details modal – centered dialog */}
       <Modal
         visible={!!active}
-        animationType="slide"
+        animationType="fade"
         transparent
         onRequestClose={() => setActive(null)}
       >
-        <View className="flex-1 bg-black/60 justify-end">
-          <View className="bg-[#2B2B2B] rounded-t-2xl p-4 max-h-[85vh]">
+        <View className="flex-1 bg-black/60 items-center justify-center px-4">
+          <View className="w-full max-w-[560px] rounded-2xl bg-card border border-border p-4 max-h-[85vh]">
             <View className="flex-row items-center justify-between">
               <View>
-                <Text className="text-[#FFD100] text-lg font-extrabold">
+                <Text className="text-primary text-lg font-extrabold">
                   {active?.dayName || "Workout"}
                 </Text>
-                <Text className="text-[#CFCFCF]">{formatDate(active?.date)}</Text>
+                <Text className="text-muted">{formatDate(active?.date)}</Text>
               </View>
               <TouchableOpacity
                 onPress={() => setActive(null)}
-                className="px-3 py-1 rounded-lg bg-[#333533]"
+                className="px-3 py-1 rounded-lg bg-field border border-fieldBorder"
               >
-                <Text className="text-white font-bold">Close</Text>
+                <Text className="text-text font-bold">Close</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Summary in modal (no volume) */}
             <View className="flex-row gap-4 mt-3">
-              <Text className="text-[#CFCFCF]">
+              <Text className="text-muted">
                 Exercises:{" "}
-                <Text className="text-[#F4F4F4] font-bold">
+                <Text className="text-text font-bold">
                   {active?.entries?.length ?? 0}
                 </Text>
               </Text>
-              <Text className="text-[#CFCFCF]">
+              <Text className="text-muted">
                 Sets:{" "}
-                <Text className="text-[#F4F4F4] font-bold">
+                <Text className="text-text font-bold">
                   {active?.summary?.completedSets ?? 0}/
                   {active?.summary?.totalSets ?? 0}
                 </Text>
               </Text>
             </View>
 
-            {/* Full exercises list */}
             <ScrollView className="mt-4">
-              <View className="space-y-3">
+              <View className="gap-3">
                 {active?.entries?.map((e) => (
                   <View
                     key={e.exerciseId}
-                    className="bg-[#1F1F1F] rounded-xl border border-[#000]/40"
+                    className="bg-bg rounded-xl border border-border"
                   >
-                    <View className="px-4 py-3 border-b border-[#000]/40">
-                      <Text className="text-[#F4F4F4] font-bold">{e.name}</Text>
-                      <Text className="text-[#9AA0A6]">{e.sets.length} sets</Text>
+                    <View className="px-4 py-3 border-b border-border">
+                      <Text className="text-text font-bold">{e.name}</Text>
+                      <Text className="text-muted">{e.sets.length} sets</Text>
                     </View>
+
                     <View className="px-4 py-2">
                       {e.sets.map((s, idx) => (
                         <View
                           key={idx}
                           className={`flex-row justify-between py-2 ${
-                            idx > 0 ? "border-t border-[#000]/40" : ""
+                            idx > 0 ? "border-t border-border" : ""
                           }`}
                         >
-                          <Text className="text-[#CFCFCF]">Set {idx + 1}</Text>
-                          <Text className="text-[#F4F4F4]">
+                          <Text className="text-muted">Set {idx + 1}</Text>
+                          <Text className="text-text">
                             {s.weight ?? 0} kg × {s.reps ?? 0} reps
                           </Text>
                         </View>
@@ -281,7 +276,7 @@ export default function TrainingHistory() {
                   </View>
                 ))}
               </View>
-              <View className="h-6" />
+              <View className="h-3" />
             </ScrollView>
           </View>
         </View>
