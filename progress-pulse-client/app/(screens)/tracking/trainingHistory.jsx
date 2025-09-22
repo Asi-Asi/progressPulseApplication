@@ -3,6 +3,8 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal } from "react-native";
 import { Stack } from "expo-router";
 import AppLogo from "../../../assets/components/ui/AppLogo";
+import BottomTabs from "../../../assets/components/navigation/BottomTabs"; // <-- tabs
+
 
 /* ===== Demo data (replace with real API later) ===== */
 const DEMO_WORKOUTS = [
@@ -281,6 +283,8 @@ export default function TrainingHistory() {
           </View>
         </View>
       </Modal>
+      <BottomTabs role={20} currentHref="" />
+      
     </View>
   );
 }

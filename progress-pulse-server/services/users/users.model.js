@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
-import { createUser, getAll, getByEmail, deleteById } from "./users.db.js";
+import { createUser, getAll, getByEmail, deleteById, updateById } from "./users.db.js";
 import { formatInTimeZone } from 'date-fns-tz';                             
+import { Roles } from '../auth/roles.js';
 
 
 
@@ -36,7 +37,7 @@ export default class User{
     this.phone     = phone?.trim() || '';
     this.email     = email?.trim().toLowerCase();
     this.password  = bcrypt.hashSync(password, 10); // 10 מספיק ומהיר
-    this.roleLevel = roleLevel ?? 'USER';
+    this.roleLevel = roleLevel ?? Roles.USER;
     this.createdAt = toLocal(new Date());
     }
 

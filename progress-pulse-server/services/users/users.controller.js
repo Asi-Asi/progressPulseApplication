@@ -3,6 +3,7 @@ import User  from "./users.model.js";
 import bcrypt from 'bcrypt';
 import { Roles } from '../auth/roles.js';
 import { signAccessToken } from '../auth/auth.tokens.js';
+import { getByEmail as dbGetByEmail, createUser as dbCreateUser } from './users.db.js'; 
 
 
 
@@ -50,7 +51,7 @@ export async function addUser(req, res) {
 }
 
 
-
+//castro's register
 export async function register(req, res) {
   try {
     let { name = '', email, password } = req.body ?? {};
@@ -156,3 +157,42 @@ export async function deleteUserById(req, res) {
     return res.status(500).json({ message: 'Internal server error' });
   }
 }   
+
+
+
+// updating user by id
+export async function updateUserById(req, res) {
+  try {
+    const { id } = req.params;
+    let data = req.body ?? {};
+
+    // לבטיחות: נאפשר עדכון רק של שדות מותרים
+    const allowed = ['firstName', 'lastName', 'name', 'birthDate', 'sex', 'phone', 'email', 'password', 'roleLevel'];
+    const patch = {};
+    for (const k of allowed) {
+      if (k in data && data[k] !== undefined && data[k] !== null) {
+        patch[k] = data[k];
+      }
+    }
+
+    // נורמליזציה בסיסית
+    if (patch.email) patch.email = String(patch.email).trim().toLowerCase();
+
+    // אם מעדכנים סיסמה – הצפן
+    if (patch.password) {
+      patch.password = await bcrypt.hash(patch.password, 10);
+    }
+
+    // עדכון בפועל (דרך המודל)
+    const result = await User.updateById(id, patch);
+
+    if (result?.matchedCount === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    return res.status(200).json({ message: 'User updated' });
+  } catch (err) {
+    console.error('updateUserById error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}

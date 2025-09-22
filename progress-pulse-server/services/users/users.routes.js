@@ -2,6 +2,7 @@ import {Router} from 'express';
 import {getAllUsers, addUser, login, deleteUserById,updateUserById, register} from './users.controller.js';
 const usersRouter = Router();
 
+
 usersRouter
     .get('/', getAllUsers)
     .post('/', addUser)    

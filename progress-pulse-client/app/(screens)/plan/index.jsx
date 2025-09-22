@@ -1,3 +1,4 @@
+// app/.../BuildWorkoutPlanScreen.jsx
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -14,6 +15,10 @@ import { Stack, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePlanDraft } from '../../../assets/lib/planDraft';
 import AppLogo from "../../../assets/components/ui/AppLogo";
+import BottomTabs from "../../../assets/components/navigation/BottomTabs"; // <-- tabs
+
+// role numbers: 10 admin, 20 trainee, 30 coach
+const ROLE_NUMBER = 20; // TODO: replace with your real user.role
 
 export default function BuildWorkoutPlanScreen() {
   const router = useRouter();
@@ -43,10 +48,10 @@ export default function BuildWorkoutPlanScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      {/* we still keep Stack for default header styling */}
+      {/* Header */}
       <Stack.Screen
         options={{
-          headerTitle: () => <AppLogo/>, 
+          headerTitle: () => <AppLogo/>,
           headerTitleAlign: "left",
           headerStyle: { backgroundColor: "#FDFBFA" },
         }}
@@ -56,7 +61,7 @@ export default function BuildWorkoutPlanScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 140 }} // space for tabs
       >
         <View className="px-5 pt-5">
           <Text className="text-text text-2xl font-extrabold">Build Workout Plan</Text>
@@ -90,7 +95,6 @@ export default function BuildWorkoutPlanScreen() {
                 className="rounded-full p-3 bg-primary"
                 accessibilityLabel="Start building plan"
               >
-                {/* Icons don't inherit Tailwind color; pass hex that matches `text` */}
                 <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
@@ -211,7 +215,7 @@ export default function BuildWorkoutPlanScreen() {
               placeholder="1-7"
               keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}
               className="rounded-xl px-4 py-3 mb-4 bg-bg text-text border border-border"
-              placeholderTextColor="#888888" // muted
+              placeholderTextColor="#888888"
             />
 
             <View className="flex-row gap-3">
@@ -235,6 +239,9 @@ export default function BuildWorkoutPlanScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Bottom tabs (role-aware) */}
+      <BottomTabs role={ROLE_NUMBER} currentHref="/(screens)/plan" />
     </View>
   );
 }

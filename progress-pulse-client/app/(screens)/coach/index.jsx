@@ -16,6 +16,9 @@ import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AppLogo from "../../../assets/components/ui/AppLogo";
 
+import BottomTabs from "../../../assets/components/navigation/BottomTabs"; // <-- tabs
+
+
 /* ===== Demo data ===== */
 const DEMO_SUBSCRIBERS = [
   { id: "u101", name: "Ava Johnson",  email: "ava.johnson@example.com",  avatarUrl: "", since: "2025-07-12", lastWorkoutDate: "2025-08-30", status: "approved" },
@@ -357,6 +360,7 @@ export default function CoachScreen() {
 
         <View className="h-8" />
       </ScrollView>
+      <BottomTabs role={30} currentHref="/(screens)/coach/subscribers" />
     </View>
   );
 }

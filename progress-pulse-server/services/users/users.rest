@@ -24,3 +24,41 @@ Content-Type: application/json
 }
 
 ###
+
+POST https://progresspulseapplication.onrender.com/api/users/register
+Content-Type: application/json
+
+{
+  "name": "demo",
+  "email": "demo+32@example.com",
+  "password": "securepassword"
+}
+###
+
+
+POST https://progresspulseapplication.onrender.com/api/users/login
+Content-Type: application/json
+
+{
+  "email": "demo+32@example.com",
+  "password": "securepassword"
+}
+
+
+
+###
+PUT https://progresspulseapplication.onrender.com/api/users/68d15d0146be3b9e1c46e0d6
+Content-Type: application/json
+
+{
+  "firstName": "Demo",
+  "lastName": "User",
+  "phone": "050-1234567"
+}
+
+
+###
+
+curl -X PUT https://progresspulseapplication.onrender.com/api/users/68d15d0146be3b9e1c46e0d6 \
+  -H "Content-Type: application/json" \
+  -d '{"firstName":"Demo","lastName":"User","phone":"050-1234567"}'

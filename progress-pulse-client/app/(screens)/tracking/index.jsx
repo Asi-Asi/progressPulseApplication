@@ -1,4 +1,4 @@
-// app/TrackWorkout.jsx
+// app/(screens)/tracking/index.jsx
 import React, { useMemo, useState } from "react";
 import {
   View,
@@ -12,9 +12,11 @@ import {
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // <-- needed
 
 import AppLogo from "../../../assets/components/ui/AppLogo";
-import BookIcon from "../../../assets/images/svg/book.svg"; // <-- header icon
+import BookIcon from "../../../assets/images/svg/book.svg";
+import BottomTabs from "../../../assets/components/navigation/BottomTabs";
 
 /* === sample data — replace with your real plan === */
 const samplePlan = {
@@ -63,6 +65,14 @@ const safeAlert = (title, msg = "") => {
 
 export default function TrackWorkout() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  // === constants to keep the button above BottomTabs ===
+  const TAB_CARD_HEIGHT = 64;         // visual height of your tab card
+  const TAB_OUTER_MARGIN = 16;        // bottom margin of the tab card
+  const EXTRA_GAP = 8;                // breathing room between button & tabs
+  const BTN_OFFSET =
+    TAB_CARD_HEIGHT + TAB_OUTER_MARGIN + Math.max(insets.bottom, 12) + EXTRA_GAP;
 
   const [plan] = useState(samplePlan);
   const [selectedDayId, setSelectedDayId] = useState(plan.days[0]?.id);
@@ -170,10 +180,10 @@ export default function TrackWorkout() {
 
   // --- column sizing (keeps names from being squeezed) ---
   const COL = {
-    EX_MIN: 240, // Exercise column minimum (allows full names to wrap)
-    SET_W: 72,   // "Set" / "Sets"
-    NUM_W: 96,   // "Reps" / "Weight"
-    BTN_W: 48,   // trash button
+    EX_MIN: 240,
+    SET_W: 72,
+    NUM_W: 96,
+    BTN_W: 48,
   };
 
   return (
@@ -183,8 +193,6 @@ export default function TrackWorkout() {
           headerTitle: () => <AppLogo />,
           headerTitleAlign: "left",
           headerStyle: { backgroundColor: "#FDFBFA" },
-
-          // Top-right Training History icon button
           headerRight: () => (
             <TouchableOpacity
               accessibilityRole="button"
@@ -199,15 +207,13 @@ export default function TrackWorkout() {
         }}
       />
 
-      {/* in-page title */}
+      {/* Title */}
       <View className="px-4 pt-5">
         <Text className="text-text text-2xl font-extrabold">Track Workout</Text>
-        <Text className="text-muted mt-1">
-          Log sets and weights for today’s session.
-        </Text>
+        <Text className="text-muted mt-1">Log sets and weights for today’s session.</Text>
       </View>
 
-      {/* ===== compact day picker ===== */}
+      {/* Day picker */}
       <View className="px-4 pt-3">
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View className="flex-row gap-2 pb-2">
@@ -235,8 +241,12 @@ export default function TrackWorkout() {
         </ScrollView>
       </View>
 
-      <ScrollView className="flex-1 px-4">
-        {/* ===== summary table ===== */}
+      {/* Content */}
+      <ScrollView
+        className="flex-1 px-4"
+        contentContainerStyle={{ paddingBottom: BTN_OFFSET + 80 }} // leave space for the raised button
+      >
+        {/* summary table */}
         <View className="mt-2 bg-card rounded-xl overflow-hidden border border-border">
           <View className="flex-row">
             <View className="flex-1 border-r border-border px-3 py-2">
@@ -265,7 +275,7 @@ export default function TrackWorkout() {
           ))}
         </View>
 
-        {/* ===== add exercise + log table ===== */}
+        {/* add exercise + log table */}
         <View className="mt-4 bg-card rounded-xl border border-border">
           <View className="flex-row items-center justify-between px-4 py-3">
             <Text className="text-text font-extrabold">Add exercise</Text>
@@ -286,7 +296,6 @@ export default function TrackWorkout() {
           </View>
 
           <View className="border-t border-border">
-            {/* full log table is horizontally scrollable */}
             <ScrollView horizontal showsHorizontalScrollIndicator>
               <View
                 style={{
@@ -330,7 +339,6 @@ export default function TrackWorkout() {
                     <View key={exercise.id} className="border-t border-border">
                       {sets.map((s, idx) => (
                         <View key={idx} className="flex-row items-stretch">
-                          {/* Exercise name (wraps to show full name) */}
                           {idx === 0 ? (
                             <View
                               className="px-3 py-3 border-r border-border"
@@ -443,8 +451,8 @@ export default function TrackWorkout() {
         <View className="h-28" />
       </ScrollView>
 
-      {/* ===== Finish Workout button (sticky) ===== */}
-      <View className="absolute left-0 right-0 bottom-4 px-4">
+      {/* ===== Finish Workout button (raised above tabs) ===== */}
+      <View style={{ position: "absolute", left: 16, right: 16, bottom: BTN_OFFSET }}>
         <TouchableOpacity
           disabled={finishDisabled}
           onPress={handleFinishWorkout}
@@ -458,7 +466,7 @@ export default function TrackWorkout() {
         </TouchableOpacity>
       </View>
 
-      {/* ===== Exercise Picker (centered dialog) ===== */}
+      {/* ===== Exercise Picker ===== */}
       <Modal
         visible={pickerOpen}
         animationType="fade"
@@ -509,6 +517,9 @@ export default function TrackWorkout() {
           </View>
         </View>
       </Modal>
+
+      {/* Tabs */}
+      <BottomTabs role={20} currentHref="/(screens)/tracking" />
     </View>
   );
 }
