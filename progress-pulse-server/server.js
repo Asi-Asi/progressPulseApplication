@@ -6,6 +6,7 @@ import router from './router.js';
 
 
 
+
 const PORT = process.env.PORT || 5500;
 const server = express();
 
@@ -23,3 +24,5 @@ server.use('/api', router);
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
+
+

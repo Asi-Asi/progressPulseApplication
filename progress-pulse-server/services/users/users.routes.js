@@ -1,15 +1,54 @@
 import {Router} from 'express';
 import {getAllUsers, addUser, login, deleteUserById,updateUserById, register} from './users.controller.js';
+import { requireAuth, requireRole } from '../auth/auth.middleware.js';
+import { Roles } from '../auth/roles.js';
+import { ObjectId } from 'mongodb';
+
+
+
+
 const usersRouter = Router();
 
+//helper functions
+function rejectNoSqlKeys(obj) {
+    for (const k of Object.keys(obj || {})) {
+        if (k.startsWith('$')) throw new Error('Illegal key');
+        if (obj[k] && typeof obj[k] === 'object') rejectNoSqlKeys(obj[k]);
+    }
+}
 
+function mustBeObjectId(req, res, next) {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid id' });
+    next();
+}
+
+function validateUpdateBody(req, res, next) {
+    try {
+        rejectNoSqlKeys(req.body);
+        next();
+    } catch {
+    res.status(400).json({ message: 'Invalid input' });
+    }
+}
+//End helper functions
+
+
+
+// Routes
 usersRouter
-    .get('/', getAllUsers)
-    .post('/', addUser)    
     .post('/register', register)
     .post('/login', login)
-    .put('/:id', updateUserById)
-    .delete('/:id', deleteUserById);
+    .put('/:id', requireAuth, mustBeObjectId, validateUpdateBody, updateUserById)
+
+    // Admin routes
+    .get('/',  requireAuth , requireRole(Roles.ADMIN),getAllUsers)
+    .delete('/:id', requireAuth, requireRole(Roles.ADMIN), deleteUserById)
+
     
 
+
 export default usersRouter;
+
+
+

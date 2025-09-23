@@ -15,9 +15,7 @@ export async function getAll(){
     }
     
     finally {
-        if (client) {
-            client.close();
-        }
+      if (client) await client.close();
     }
 }
 
@@ -41,7 +39,7 @@ export async function createUser(user) {
     console.error('Error creating user:', error);
     throw error;
   } finally {
-    if (client) client.close();
+    if (client) await client.close();
   }
 }
 
@@ -57,7 +55,7 @@ export async function getByEmail(email) {
     console.error('Error fetching user by email:', error);
     throw error;
   } finally {
-    if (client) client.close();
+    if (client) await client.close();
   }
 }
 
@@ -74,7 +72,7 @@ export async function updateById(id, data) {
     console.error('Error updating user by id:', error);
     throw error;
   } finally {
-    if (client) client.close();
+    if (client) await client.close();
   }
 }
 
@@ -89,7 +87,6 @@ export async function deleteById(id) {
     console.error('Error deleting user by id:', error);
     throw error;
   }finally {
-    if (client) client.close();
+    if (client) await client.close();
   }
 }
-  

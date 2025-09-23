@@ -102,7 +102,7 @@ export async function login(req, res) {
 
     if (adminEmail && adminPass && email === adminEmail && password === adminPass) {
       const token = jwt.sign(
-        { sub: 'admin', role: 'admin' },
+        { sub: 'admin', rlv : Roles.ADMIN },
         process.env.JWT_SECRET || 'devsecret',
         { expiresIn: '2h' }
       );
@@ -114,11 +114,7 @@ export async function login(req, res) {
       });
     }
 
-    // Normal user via DB (adjust to your model/db helper)
-    // If your model exposes getByEmail:
     const user = await User.findByEmail(email);
-    // If not, use:  import { getByEmail } from './users.db.js';  const user = await getByEmail(email);
-
     if (!user) return res.status(401).json({ message: 'Invalid email or password' });
 
 
@@ -131,7 +127,7 @@ export async function login(req, res) {
         return res.status(200).json({
         message: 'Login successful',
         accessToken,
-        user: { id: user._id, email: user.email, roleLevel: user.roleLevel, fullName: user.fullName }
+        user: { id: user._id, email: user.email, roleLevel: user.roleLevel }
         });
 
     } catch (error) {
@@ -146,7 +142,12 @@ export async function login(req, res) {
 export async function deleteUserById(req, res) {
   try {
 
-    const { id } = req.params;                          
+    const { id } = req.params; 
+    
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid id' });
+    }
+
     const result = await User.deleteById(id);
     if (result.deletedCount === 0) return res.status(404).json({ message: 'User not found' });
     return res.status(200).json({ message: 'User deleted' });
@@ -160,14 +161,15 @@ export async function deleteUserById(req, res) {
 
 
 
-// updating user by id
+// עדכון משתמש לפי מזהה
 export async function updateUserById(req, res) {
   try {
     const { id } = req.params;
+
     let data = req.body ?? {};
 
     // לבטיחות: נאפשר עדכון רק של שדות מותרים
-    const allowed = ['firstName', 'lastName', 'name', 'birthDate', 'sex', 'phone', 'email', 'password', 'roleLevel'];
+    const allowed = ['firstName', 'lastName', 'gender', 'email', 'password', 'roleLevel'];
     const patch = {};
     for (const k of allowed) {
       if (k in data && data[k] !== undefined && data[k] !== null) {
@@ -175,12 +177,12 @@ export async function updateUserById(req, res) {
       }
     }
 
-    // נורמליזציה בסיסית
     if (patch.email) patch.email = String(patch.email).trim().toLowerCase();
 
-    // אם מעדכנים סיסמה – הצפן
     if (patch.password) {
-      patch.password = await bcrypt.hash(patch.password, 10);
+      const raw = String(patch.password);
+      const looksHashed = raw.startsWith('$2a$') || raw.startsWith('$2b$');
+      patch.password = looksHashed ? raw : await bcrypt.hash(raw, 10);
     }
 
     // עדכון בפועל (דרך המודל)
@@ -194,5 +196,15 @@ export async function updateUserById(req, res) {
   } catch (err) {
     console.error('updateUserById error:', err);
     return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+
+
+
+function rejectNoSqlKeys(obj) {
+  for (const k of Object.keys(obj || {})) {
+    if (k.startsWith('$')) throw new Error('Illegal key');
+    if (obj[k] && typeof obj[k] === 'object') rejectNoSqlKeys(obj[k]);
   }
 }

@@ -5,36 +5,13 @@ import { Roles } from '../auth/roles.js';
 
 
 
-// helpers functions
-function toYMD(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
-function normalizeBirthDate(bd) { 
-  if (!bd) return null;
-  if (bd instanceof Date && !isNaN(bd)) return toYMD(bd);
-  if (typeof bd === 'string') {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(bd)) return bd;     
-    const d = new Date(bd);
-    if (!isNaN(d)) return toYMD(d);
-  }
-  return null;
-}
-function toLocal(d) {
-  return formatInTimeZone(d, 'Asia/Jerusalem', 'yyyy-MM-dd HH:mm:ss');
-}
 
 export default class User{
-    constructor({ firstName, lastName, name, birthDate, sex, phone, email, password, roleLevel }) {
+    constructor({ firstName, lastName, gender, email, password, roleLevel }) {
     this.firstName = firstName?.trim() || '';
     this.lastName  = lastName?.trim()  || '';
-    this.fullName  = (name?.trim() || `${this.firstName} ${this.lastName}`).trim();
-    this.birthDate = normalizeBirthDate(birthDate);
-    this.sex       = sex || '';
-    this.phone     = phone?.trim() || '';
+    this.gender    = gender || '';
     this.email     = email?.trim().toLowerCase();
     this.password  = bcrypt.hashSync(password, 10); // 10 מספיק ומהיר
     this.roleLevel = roleLevel ?? Roles.USER;
@@ -60,7 +37,7 @@ export default class User{
       }
 
     static async deleteById(id) {
-         return await deleteById(id);
+      return await deleteById(id);
     }
 
     async save(){
