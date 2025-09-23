@@ -1,9 +1,19 @@
 import express from 'express';
-// import { requireAuth } from '../auth/auth.middleware.js'; // או הנתיב אצלך
+import { requireAuth } from '../auth/auth.middleware.js'; // או הנתיב אצלך
 import {getMyPlan, overwriteMyPlan } from './plans.controller.js';
 
 const plansRouter = express.Router();
-// plansRouter.use(requireAuth); // כל הנתיבים דורשים התחברות
+
+// TEMP: log that this file is loaded in production
+console.log('[plans] router file loaded');
+
+plansRouter.use((req, _res, next) => {
+  // TEMP: log any request that reaches the plans router
+  console.log(`[plans] ${req.method} ${req.path}`);
+  next();
+});
+
+plansRouter.use(requireAuth);
 
 plansRouter
     // Get current plan for the authenticated user
