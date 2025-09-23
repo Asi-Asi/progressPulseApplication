@@ -1,6 +1,6 @@
-PUT http://localhost:3000/api/plans/me
+PUT https://progresspulseapplication.onrender.com/api/plans/me
 Content-Type: application/json
-Authorization: Bearer {{ACCESS_TOKEN}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2NTMxMDcsImV4cCI6MTc1ODY1NDAwN30.koYMElA8Yu46lS00P7p0Hu4D9Ao39gnSaS7k2l5WJV4
 
 {
   "days": [
