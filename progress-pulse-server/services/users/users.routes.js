@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import {getAllUsers, login, deleteUserById,updateUserById, register} from './users.controller.js';
+import {getAllUsers, login, register, deleteUserById,updateUserById, getMe, updateMe, changeMyPassword} from './users.controller.js';
 import { requireAuth, requireRole } from '../auth/auth.middleware.js';
 import { Roles } from '../auth/roles.js';
 import { ObjectId } from 'mongodb';
