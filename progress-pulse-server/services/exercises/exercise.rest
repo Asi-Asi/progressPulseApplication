@@ -1,2 +1,2 @@
 GET https://progresspulseapplication.onrender.com/api/exercises?muscle=Back&limit=10
-Authorization: Bearer <ACCESS_TOKEN>
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2Njg5MjYsImV4cCI6MTc1ODY2OTgyNn0.wYC8LODznHnSZ6O_RA7REW3GdnKhDFxAg8OCvGOE1NE
