@@ -28,34 +28,43 @@ export async function getAllUsers(req, res) {
 
 
 //register
+// register (fixed)
 export async function register(req, res) {
   try {
     let { name = '', email, password } = req.body ?? {};
-    if (!email || !password) return res.status(400).json({ message: 'Email and password are required' });
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     email = String(email).trim().toLowerCase();
     const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!emailOk) return res.status(400).json({ message: 'Invalid email format' });
-    if (String(password).length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    if (String(password).length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
 
-    // Duplicate check
+    // best‑effort duplicate check (DB is still the source of truth)
     const exists = await dbGetByEmail(email);
     if (exists) return res.status(409).json({ message: 'Email already registered' });
 
-    // Hash + create via DB helper
     const passwordHash = bcrypt.hashSync(password, 10);
     const saved = await dbCreateUser({ name, email, password: passwordHash });
 
-    // saved is the insertOne result — return a clean shape
-    const id = saved?.insertedId?.toString?.();
+    // createUser returns the saved document with _id (not insertedId)
+    const id = saved?._id?.toString?.();
+
     return res.status(201).json({
       message: 'Registration successful',
       role: 'user',
-      token: undefined, // add JWT here later if you want auto-login
+      token: undefined,
       user: { id, name, email }
     });
   } catch (err) {
     console.error('register error:', err);
+    // map duplicate key to 409 instead of 500
+    if (err?.status === 409 || err?.code === 11000) {
+      return res.status(409).json({ message: 'Email already in use' });
+    }
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
