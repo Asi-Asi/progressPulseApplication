@@ -41,19 +41,7 @@ export async function revokeRefreshToken(token) {
     }
 }
 
-export async function revokeAllUserRefreshTokens(userId) {
-    let client = null;
-    try {
-        client = await MongoClient.connect(process.env.CONNECTION_STRING);
-        const db = client.db(process.env.DB_NAME);
-        await db.collection(COLLECTION).updateMany(
-            { userId: String(userId), revokedAt: null },
-            { $set: { revokedAt: new Date() } }
-        ); 
-    } finally {
-        if (client) await client.close();
-    }
-}
+
 
 export async function isRefreshTokenActive(token) {
     let client = null;

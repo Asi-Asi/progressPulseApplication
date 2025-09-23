@@ -1,7 +1,7 @@
 // services/auth/auth.controller.js
 import jwt from 'jsonwebtoken';
 import { signAccessToken, signRefreshToken, verifyRefresh } from './auth.tokens.js';
-import { storeRefreshToken, revokeRefreshToken, revokeAllUserRefreshTokens, isRefreshTokenActive } from './refreshTokens.db.js';
+import { storeRefreshToken, revokeRefreshToken, isRefreshTokenActive } from './refreshTokens.db.js';
 
 export async function refreshController(req, res) {
     const { refreshToken } = req.body ?? {};
@@ -43,9 +43,4 @@ export async function logoutController(req, res) {
     return res.json({ message: 'Logged out' });
 }
 
-export async function logoutAllController(req, res) {
-  const userId = req.user?.sub;                                   // נדרש Access
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    await revokeAllUserRefreshTokens(userId);
-    return res.json({ message: 'Logged out from all devices' });
-}
+
