@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 export function signAccessToken(user) {
   
   const payload = { sub: String(user._id), rlv: user.roleLevel || 10 };
-  return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES || '15m', 
-  });
+  const secret = process.env.JWT_SECRET || 'devsecret';
+  const exp = process.env.JWT_EXPIRES || '15m';
+  return jwt.sign(payload, secret, { expiresIn: exp });
 }

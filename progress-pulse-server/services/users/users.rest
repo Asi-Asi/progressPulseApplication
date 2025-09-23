@@ -30,7 +30,7 @@ Content-Type: application/json
 
 {
   "name": "demo",
-  "email": "demo+52@example.com",
+  "email": "demo+62@example.com",
   "password": "securepassword"
 }
 ###
@@ -40,7 +40,7 @@ POST https://progresspulseapplication.onrender.com/api/users/login
 Content-Type: application/json
 
 {
-  "email": "demo+32@example.com",
+  "email": "demo+62@example.com",
   "password": "securepassword"
 }
 

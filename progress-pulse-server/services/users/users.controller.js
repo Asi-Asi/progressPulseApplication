@@ -113,8 +113,10 @@ export async function login(req, res) {
         user: { email: adminEmail, name: 'Administrator' }
       });
     }
+    // Normal user
+    const normEmail = String(email).trim().toLowerCase();
 
-    const user = await User.findByEmail(email);
+    const user = await User.findByEmail(normEmail);
     if (!user) return res.status(401).json({ message: 'Invalid email or password' });
 
 

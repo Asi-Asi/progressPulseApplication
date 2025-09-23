@@ -39,11 +39,12 @@ function validateUpdateBody(req, res, next) {
 usersRouter
     .post('/register', register)
     .post('/login', login)
-    .put('/:id', requireAuth, mustBeObjectId, validateUpdateBody, updateUserById)
-
+    
+    
     // Admin routes
     .get('/',  requireAuth , requireRole(Roles.ADMIN),getAllUsers)
     .delete('/:id', requireAuth, requireRole(Roles.ADMIN), deleteUserById)
+    .put('/:id', requireAuth, requireRole(Roles.ADMIN), mustBeObjectId, validateUpdateBody, updateUserById)
 
     
 
