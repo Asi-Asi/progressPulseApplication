@@ -1,2 +1,21 @@
 GET https://progresspulseapplication.onrender.com/api/exercises?muscle=Back&limit=10
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2Njg5MjYsImV4cCI6MTc1ODY2OTgyNn0.wYC8LODznHnSZ6O_RA7REW3GdnKhDFxAg8OCvGOE1NE
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2NjkxNzgsImV4cCI6MTc1ODY3MDA3OH0.Drb3IT55JBe6CrQIPDJRP22_NNvGJ1XvwXvic9XFGuk
+
+###
+GET https://progresspulseapplication.onrender.com/api/exercises?query=lat
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2NjkxNzgsImV4cCI6MTc1ODY3MDA3OH0.Drb3IT55JBe6CrQIPDJRP22_NNvGJ1XvwXvic9XFGuk
+
+
+
+###
+
+POST https://progresspulseapplication.onrender.com/api/exercises
+Content-Type: application/json
+Authorization: Bearer <ADMIN_ACCESS_TOKEN>
+
+{
+  "name": "Cable Crossover",
+  "muscle": "Chest",
+  "type": "Isolation",
+  "equipment": "Cable"
+}

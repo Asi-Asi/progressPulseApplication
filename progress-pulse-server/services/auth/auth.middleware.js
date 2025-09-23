@@ -47,3 +47,10 @@ export function requireRole(minLevel) {
     return res.status(403).json({ message: 'Forbidden' });
   };
 }
+
+// Allow only admin (role level 10)
+export function requireAdmin(req, res, next) {
+  const lvl = req.user?.rlv ?? 999;
+  if (lvl === 10) return next();
+  return res.status(403).json({ message: 'Forbidden' });
+}

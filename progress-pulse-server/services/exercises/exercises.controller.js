@@ -1,4 +1,4 @@
-import { findExercises, findExerciseById } from './exercises.db.js';
+import { insertExercise ,findExercises, findExerciseById } from './exercises.db.js';
 import { validateListQuery, normalizeNameRegex, isValidObjectIdString } from './exercises.model.js';
 
 // GET /api/exercises
@@ -30,6 +30,30 @@ export async function getExerciseById(req, res) {
     return res.json(ex);
   } catch (err) {
     console.error('getExerciseById error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+}
+
+
+
+// POST /api/exercises  (admin only)
+export async function createExercise(req, res) {
+  try {
+    // minimal body: { name, muscle, type, equipment }
+    const { valid, errors } = validateExerciseDoc(req.body || {});
+    if (!valid) return res.status(400).json({ message: 'Validation failed', errors });
+
+    const { conflict, exercise } = await insertExercise({
+      name: req.body.name.trim(),
+      muscle: req.body.muscle,
+      type: req.body.type,
+      equipment: req.body.equipment,
+    });
+
+    if (conflict) return res.status(409).json({ message: 'Exercise already exists', exercise });
+    return res.status(201).json(exercise);
+  } catch (err) {
+    console.error('createExercise error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
 }

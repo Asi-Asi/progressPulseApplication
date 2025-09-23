@@ -42,3 +42,29 @@ export async function findExerciseById(id) {
     if (client) await client.close();
   }
 }
+
+
+
+export async function insertExercise(doc) {
+  let client = null;
+  try {
+    client = await MongoClient.connect(CN_STR);
+    const db = client.db(DB_NAME);
+    const col = db.collection(COLLECTION);
+
+    // prevent duplicates by (name + muscle) without unique index
+    const exists = await col.findOne({ name: doc.name, muscle: doc.muscle });
+    if (exists) {
+      return { conflict: true, exercise: exists };
+    }
+
+    const res = await col.insertOne(doc);
+    const created = await col.findOne(
+      { _id: res.insertedId },
+      { projection: { name: 1, muscle: 1, type: 1, equipment: 1 } }
+    );
+    return { conflict: false, exercise: created };
+  } finally {
+    if (client) await client.close();
+  }
+}
