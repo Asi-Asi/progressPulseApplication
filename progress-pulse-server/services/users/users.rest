@@ -59,6 +59,32 @@ Content-Type: application/json
 
 ###
 
-curl -X PUT https://progresspulseapplication.onrender.com/api/users/68d15d0146be3b9e1c46e0d6 \
-  -H "Content-Type: application/json" \
-  -d '{"firstName":"Demo","lastName":"User","phone":"050-1234567"}'
+GET https://progresspulseapplication.onrender.com/api/users/me
+Authorization: Bearer {{accessToken}}
+
+
+###
+
+PUT https://progresspulseapplication.onrender.com/api/users/me
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "firstName": "Demo",
+  "lastName": "User",
+  "gender": "male",
+  "email": "demo+62@example.com"
+}
+
+###
+
+PUT https://progresspulseapplication.onrender.com/api/users/me/password
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "currentPassword": "securepassword",
+  "newPassword": "newsecurepassword"
+}
+
+###

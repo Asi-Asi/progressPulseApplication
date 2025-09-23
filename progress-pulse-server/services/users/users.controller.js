@@ -51,7 +51,7 @@ export async function addUser(req, res) {
 }
 
 
-//castro's register
+//register
 export async function register(req, res) {
   try {
     let { name = '', email, password } = req.body ?? {};
@@ -83,10 +83,6 @@ export async function register(req, res) {
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
-
-
-
-
 
 
 export async function login(req, res) {
@@ -136,11 +132,11 @@ export async function login(req, res) {
       console.error('Error updating user:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
-  }
-  
+}
 
 
 
+//admin delete user by id
 export async function deleteUserById(req, res) {
   try {
 
@@ -162,8 +158,7 @@ export async function deleteUserById(req, res) {
 }   
 
 
-
-// עדכון משתמש לפי מזהה
+//admin update user by id
 export async function updateUserById(req, res) {
   try {
     const { id } = req.params;
@@ -204,9 +199,89 @@ export async function updateUserById(req, res) {
 
 
 
-function rejectNoSqlKeys(obj) {
-  for (const k of Object.keys(obj || {})) {
-    if (k.startsWith('$')) throw new Error('Illegal key');
-    if (obj[k] && typeof obj[k] === 'object') rejectNoSqlKeys(obj[k]);
+//get my profile
+export async function getMe(req, res) {
+  try {
+    const id = req.user?.sub;
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const { password, ...safe } = user; // אל תחזיר סיסמה
+    return res.json(safe);
+  } catch (err) {
+    console.error('getMe error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+//update my profile
+export async function updateMe(req, res) {
+  try {
+    const id = req.user?.sub;
+
+    // רק שדות שמותר למשתמש לשנות לעצמו
+    const allowed = ['firstName', 'lastName', 'gender', 'email'];
+    const patch = {};
+    for (const k of allowed) if (k in req.body && req.body[k] != null) patch[k] = req.body[k];
+
+    // ולידציה בסיסית
+    if ('gender' in patch) {
+      const g = String(patch.gender).toLowerCase();
+      if (!['male', 'female'].includes(g)) {
+        return res.status(400).json({ message: 'Gender must be male or female' });
+      }
+      patch.gender = g;
+    }
+
+    if (patch.email) {
+      patch.email = String(patch.email).trim().toLowerCase();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patch.email);
+      if (!emailOk) return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // אם משנים אימייל – בדיקת כפילות
+    if (patch.email) {
+      const exists = await User.findByEmail(patch.email);
+      if (exists && String(exists._id) !== String(id)) {
+        return res.status(409).json({ message: 'Email already in use' });
+      }
+    }
+
+    const result = await User.updateById(id, patch);
+    if (!result || result.matchedCount === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    return res.json({ message: 'Profile updated' });
+  } catch (err) {
+    console.error('updateMe error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+//change my password
+export async function changeMyPassword(req, res) {
+  try {
+    const id = req.user?.sub;
+    const { currentPassword, newPassword } = req.body ?? {};
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'currentPassword and newPassword are required' });
+    }
+    if (String(newPassword).length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) return res.status(401).json({ message: 'Current password is incorrect' });
+
+    const hash = await bcrypt.hash(newPassword, 10);
+    await User.updateById(id, { password: hash });
+
+    return res.json({ message: 'Password changed' });
+  } catch (err) {
+    console.error('changeMyPassword error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 }

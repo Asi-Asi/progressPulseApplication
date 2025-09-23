@@ -1,6 +1,5 @@
 import bcrypt from 'bcrypt';
-import { createUser, getAll, getByEmail, deleteById, updateById } from "./users.db.js";
-import { formatInTimeZone } from 'date-fns-tz';                             
+import { createUser, getAll, getByEmail, deleteById, updateById, getById } from "./users.db.js";
 import { Roles } from '../auth/roles.js';
 
 
@@ -38,6 +37,16 @@ export default class User{
 
     static async deleteById(id) {
       return await deleteById(id);
+    }
+
+    static async findById(id) {
+        try {
+            const user = await getById(id);
+            return user;
+        } catch (error) {
+            console.error('Error fetching user by id:', error);
+            throw error;
+        }
     }
 
     async save(){

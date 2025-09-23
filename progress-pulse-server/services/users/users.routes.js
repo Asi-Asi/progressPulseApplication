@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import {getAllUsers, addUser, login, deleteUserById,updateUserById, register} from './users.controller.js';
+import {getAllUsers, login, deleteUserById,updateUserById, register} from './users.controller.js';
 import { requireAuth, requireRole } from '../auth/auth.middleware.js';
 import { Roles } from '../auth/roles.js';
 import { ObjectId } from 'mongodb';
@@ -40,11 +40,16 @@ usersRouter
     .post('/register', register)
     .post('/login', login)
     
-    
+
     // Admin routes
     .get('/',  requireAuth , requireRole(Roles.ADMIN),getAllUsers)
     .delete('/:id', requireAuth, requireRole(Roles.ADMIN), deleteUserById)
     .put('/:id', requireAuth, requireRole(Roles.ADMIN), mustBeObjectId, validateUpdateBody, updateUserById)
+
+    //profile routes
+    usersRouter.get('/me', requireAuth, getMe);
+    usersRouter.put('/me', requireAuth, updateMe);
+    usersRouter.put('/me/password', requireAuth, changeMyPassword);
 
     
 

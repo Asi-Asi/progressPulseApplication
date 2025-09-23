@@ -90,3 +90,18 @@ export async function deleteById(id) {
     if (client) await client.close();
   }
 }
+
+
+export async function getById(id) {
+  let client = null;
+  try {
+    client = await MongoClient.connect(process.env.CONNECTION_STRING);
+    const db = client.db(process.env.DB_NAME);
+    return await db.collection('Users').findOne({ _id: new ObjectId(id) });
+  } catch (error) {
+    console.error('Error fetching user by id:', error);
+    throw error;
+  } finally {
+    if (client) await client.close();
+  }
+}
