@@ -1,0 +1,11 @@
+PUT http://localhost:3000/api/plans/me
+Content-Type: application/json
+Authorization: Bearer {{ACCESS_TOKEN}}
+
+{
+  "days": [
+    { "exercises": [ { "exerciseId": "66f130bd3d9b4c7d5a9a7e13", "sets": 3 } ] },
+    { "exercises": [ { "exerciseId": "66f130bd3d9b4c7d5a9a7e52", "sets": 4 } ] }
+  ],
+  "locked": true
+}

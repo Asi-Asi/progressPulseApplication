@@ -30,8 +30,6 @@ export async function createUser(user) {
     const db = client.db(process.env.DB_NAME);
     const usersCol = db.collection('Users');
 
-   
-
     const result = await db.collection('Users').insertOne(user);
 
     // החזר את המסמך שנשמר + ה-_id החדש
