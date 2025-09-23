@@ -41,7 +41,7 @@ Content-Type: application/json
 
 {
   "email": "demo+62@example.com",
-  "password": "securepassword"
+  "password": "newsecurepassword"
 }
 
 
@@ -60,13 +60,13 @@ Content-Type: application/json
 ###
 
 GET https://progresspulseapplication.onrender.com/api/users/me
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MjE1MjQsImV4cCI6MTc1ODYyMjQyNH0.UPVhPuwrIVsZcGEeItiL7_yeEeIO-2owhm94PMJm4LI
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MjI0OTEsImV4cCI6MTc1ODYyMzM5MX0._GlvY_Pq-a_r3dzc5pGXqabxZuvjVXIkosC6hyW13Ms
 
 ###
 
 PUT https://progresspulseapplication.onrender.com/api/users/me
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MjE1MjQsImV4cCI6MTc1ODYyMjQyNH0.UPVhPuwrIVsZcGEeItiL7_yeEeIO-2owhm94PMJm4LI
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MjI0OTEsImV4cCI6MTc1ODYyMzM5MX0._GlvY_Pq-a_r3dzc5pGXqabxZuvjVXIkosC6hyW13Ms
 
 {
   "firstName": "Demo",
@@ -79,7 +79,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5M
 
 PUT https://progresspulseapplication.onrender.com/api/users/me/password
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MjE1MjQsImV4cCI6MTc1ODYyMjQyNH0.UPVhPuwrIVsZcGEeItiL7_yeEeIO-2owhm94PMJm4LI
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MjI0OTEsImV4cCI6MTc1ODYyMzM5MX0._GlvY_Pq-a_r3dzc5pGXqabxZuvjVXIkosC6hyW13Ms
 
 {
   "currentPassword": "securepassword",

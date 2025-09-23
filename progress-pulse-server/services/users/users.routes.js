@@ -51,7 +51,7 @@ usersRouter
     // Admin routes
     .get('/',  requireAuth , requireRole(Roles.ADMIN),getAllUsers)
     .put('/:id', requireAuth, requireRole(Roles.ADMIN), mustBeObjectId, validateUpdateBody, updateUserById)
-    .delete('/:id', requireAuth, requireRole(Roles.ADMIN), deleteUserById)
+    .delete('/:id', requireAuth, requireRole(Roles.ADMIN), mustBeObjectId, deleteUserById)
 
 
 export default usersRouter;
