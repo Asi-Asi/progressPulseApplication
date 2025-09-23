@@ -41,20 +41,19 @@ usersRouter
     .post('/login', login)
     
 
+    
+    //profile routes
+    usersRouter.get('/me', requireAuth, getMe)
+    usersRouter.put('/me', requireAuth, updateMe)
+    usersRouter.put('/me/password', requireAuth, changeMyPassword)
+    
+    
     // Admin routes
     .get('/',  requireAuth , requireRole(Roles.ADMIN),getAllUsers)
-    .delete('/:id', requireAuth, requireRole(Roles.ADMIN), deleteUserById)
     .put('/:id', requireAuth, requireRole(Roles.ADMIN), mustBeObjectId, validateUpdateBody, updateUserById)
-
-    //profile routes
-    usersRouter.get('/me', requireAuth, getMe);
-    usersRouter.put('/me', requireAuth, updateMe);
-    usersRouter.put('/me/password', requireAuth, changeMyPassword);
-
-    
+    .delete('/:id', requireAuth, requireRole(Roles.ADMIN), deleteUserById)
 
 
 export default usersRouter;
-
 
 
