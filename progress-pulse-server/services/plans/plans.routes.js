@@ -7,9 +7,9 @@ plansRouter.use(requireAuth); // כל הנתיבים דורשים התחברות
 
 plansRouter
     // Get current plan for the authenticated user
-    .get('/plans/me', getMyPlan)
+    .get('/me', getMyPlan)
 
     // Overwrite (upsert) the current user's plan on "Finish Plan"
-    .put('/plans/me', overwriteMyPlan)
+    .put('/me', overwriteMyPlan)
 
 export default plansRouter;

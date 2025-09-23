@@ -1,6 +1,6 @@
 PUT https://progresspulseapplication.onrender.com/api/plans/me
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2NTMxMDcsImV4cCI6MTc1ODY1NDAwN30.koYMElA8Yu46lS00P7p0Hu4D9Ao39gnSaS7k2l5WJV4
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2NjA4MTcsImV4cCI6MTc1ODY2MTcxN30.ILIyeUrYdpI-AtR9wIhpn-7wTSP3y5McClpUarSexLE
 
 {
   "days": [
