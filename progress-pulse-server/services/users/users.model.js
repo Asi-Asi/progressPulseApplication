@@ -33,7 +33,7 @@ export default class User{
 
     static async updateById(id, data) {
         return await updateById(id, data);
-      }
+    }
 
     static async deleteById(id) {
       return await deleteById(id);
