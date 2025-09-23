@@ -4,6 +4,9 @@ import bcrypt from 'bcrypt';
 import { Roles } from '../auth/roles.js';
 import { signAccessToken } from '../auth/auth.tokens.js';
 import { getByEmail as dbGetByEmail, createUser as dbCreateUser } from './users.db.js'; 
+//t
+import { signRefreshToken } from '../auth/auth.tokens.js';
+import { storeRefreshToken } from '../auth/refreshTokens.db.js';
 
 
 
@@ -21,34 +24,7 @@ export async function getAllUsers(req, res) {
 
 }
 
-//register
-export async function addUser(req, res) {
-    try {
-        const { email } = req.body;
 
-        const existing = await User.findByEmail(email);
-        if (existing) {
-            return res.status(409).json({ message: 'Email already in use' });
-        }
-
-        const user = new User({ ...req.body, email, roleLevel: Roles.USER });
-        const created = await user.save();                  // { ...user, _id }
-
-
-        // חתימת טוקן והחזרה
-        const accessToken = signAccessToken(created);
-        res.status(201).json({
-        message: 'Registered',
-        accessToken,
-        user: { id: created._id, email: created.email, roleLevel: created.roleLevel, fullName: created.fullName }
-        });
-
-
-    } catch (error) {
-        console.error('Error in addUser:', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}
 
 
 //register
@@ -84,7 +60,6 @@ export async function register(req, res) {
   }
 }
 
-
 export async function login(req, res) {
   try {
     const { email, password } = req.body ?? {};
@@ -92,46 +67,67 @@ export async function login(req, res) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Admin via .env  (supports your current EXPO_ names too)
+    // ===== Admin via .env =====
     const adminEmail = process.env.ADMIN_EMAIL || process.env.EXPO_PUBLIC_ADMIN_EMAIL;
     const adminPass  = process.env.ADMIN_PASSWORD || process.env.EXPO_PUBLIC_ADMIN_PASSWORD;
 
     if (adminEmail && adminPass && email === adminEmail && password === adminPass) {
-      const token = jwt.sign(
-        { sub: 'admin', rlv : Roles.ADMIN },
-        process.env.JWT_SECRET || 'devsecret',
-        { expiresIn: '2h' }
-      );
+      // Build payload aligned with the rest of the system (sub + rlv)
+      const adminUserMini = { _id: 'admin', roleLevel: Roles.ADMIN }; // logical identifier
+      const accessToken   = signAccessToken(adminUserMini);            // Access token
+      const refreshToken  = signRefreshToken(adminUserMini);           // Refresh token
+
+      // Persist the refresh token in DB (with its expiration)
+      const parsed    = jwt.decode(refreshToken);
+      const expiresAt = parsed?.exp ? new Date(parsed.exp * 1000) : null;
+      await storeRefreshToken({
+        userId: adminUserMini._id,
+        token: refreshToken,
+        deviceId: req.headers['x-device-id'] || null, // optional device identifier
+        expiresAt,
+      });
+
       return res.status(200).json({
         message: 'Login successful',
-        role: 'admin',
-        token,
-        user: { email: adminEmail, name: 'Administrator' }
+        accessToken,
+        refreshToken,
+        user: { id: 'admin', email: adminEmail, roleLevel: Roles.ADMIN, name: 'Administrator' }
       });
     }
-    // Normal user
-    const normEmail = String(email).trim().toLowerCase();
 
+    // ===== Normal user =====
+    const normEmail = String(email).trim().toLowerCase();
     const user = await User.findByEmail(normEmail);
     if (!user) return res.status(401).json({ message: 'Invalid email or password' });
 
+    const ok = await bcrypt.compare(password, user.password); // your field is 'password' (hashed)
+    if (!ok) return res.status(401).json({ message: 'Invalid email or password' });
 
+    // Issue both tokens
+    const accessToken  = signAccessToken(user);
+    const refreshToken = signRefreshToken(user);
 
-        const ok = await bcrypt.compare(password, user.password); // אצלך השדה נקרא password (מוצפן)
-        if (!ok) return res.status(401).json({ message: 'Invalid email or password' });
+    // Persist the refresh token in DB (with its expiration)
+    const parsed    = jwt.decode(refreshToken);
+    const expiresAt = parsed?.exp ? new Date(parsed.exp * 1000) : null;
+    await storeRefreshToken({
+      userId: user._id,
+      token: refreshToken,
+      deviceId: req.headers['x-device-id'] || null, // optional device identifier
+      expiresAt,
+    });
 
+    return res.status(200).json({
+      message: 'Login successful',
+      accessToken,
+      refreshToken,
+      user: { id: user._id, email: user.email, roleLevel: user.roleLevel }
+    });
 
-        const accessToken = signAccessToken(user);
-        return res.status(200).json({
-        message: 'Login successful',
-        accessToken,
-        user: { id: user._id, email: user.email, roleLevel: user.roleLevel }
-        });
-
-    } catch (error) {
-      console.error('Error updating user:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
+  } catch (error) {
+    console.error('login error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 }
 
 
