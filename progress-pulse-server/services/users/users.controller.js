@@ -59,14 +59,19 @@ export async function register(req, res) {
       token: undefined,
       user: { id, name, email }
     });
-  } catch (err) {
-    console.error('register error:', err);
-    // map duplicate key to 409 instead of 500
-    if (err?.status === 409 || err?.code === 11000) {
-      return res.status(409).json({ message: 'Email already in use' });
+  } catch (error) {
+      if (error?.code === 11000) {
+        console.error('Duplicate key on Users:', {
+        keyValue: error?.keyValue,
+        msg: error?.message
+      });
+        error.status = 409;
+        error.clientMessage = 'Email already in use';
+      } else {
+      console.error('Error creating user:', error?.code, error?.message);
+      }
+      throw error;
     }
-    return res.status(500).json({ message: 'Internal server error' });
-  }
 }
 
 export async function login(req, res) {
