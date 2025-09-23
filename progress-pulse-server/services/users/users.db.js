@@ -30,21 +30,7 @@ export async function createUser(user) {
     const db = client.db(process.env.DB_NAME);
     const usersCol = db.collection('Users');
 
-    // ודא אינדקסים – פעם אחת בלבד
-    if (!ensuredUsersIndexes) {
-      try {
-        await usersCol.createIndex(
-          { email: 1 },
-          { unique: true, name: 'uniq_email' }
-        );
-      } catch (e) {
-        // אם האינדקס כבר קיים עם הגדרות אחרות – התעלם מהתנגשות אופציות
-        if (e.codeName !== 'IndexOptionsConflict' && e.codeName !== 'IndexKeySpecsConflict') {
-          throw e;
-        }
-      }
-      ensuredUsersIndexes = true;
-    }
+   
 
     const result = await db.collection('Users').insertOne(user);
 
