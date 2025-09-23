@@ -1,6 +1,6 @@
 import express from 'express';
-import { requireAuth, requireAdmin } from '../auth/auth.middleware.js';
-import { listExercises, getExerciseById } from './exercises.controller.js';
+import { requireAuth } from '../auth/auth.middleware.js';
+import { listExercises, getExerciseById, createExercise } from './exercises.controller.js';
 
 const exercisesRouter = express.Router();
 
