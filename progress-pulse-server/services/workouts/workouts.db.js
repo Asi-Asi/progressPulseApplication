@@ -122,12 +122,18 @@ export async function addExercise(userId, sessionId, exerciseId) {
         const db = client.db(DB_NAME);
         const col = db.collection(WORKOUTS);
 
+        // 1) fetch without status to detect "closed"
+        const base = await col.findOne({ _id: oid(sessionId), userId: oid(userId) });
+        if (!base) return null;                 // not found / not owned by user
+        if (base.status === 'closed') return 'CLOSED';
+
+        // 2) still open → add (idempotent thanks to $addToSet)
         const r = await col.findOneAndUpdate(
-        { _id: oid(sessionId), userId: oid(userId), status: 'open' },
+        { _id: base._id },
         { $addToSet: { exercises: { exerciseId: oid(exerciseId), sets: [] } } },
         { returnDocument: 'after' }
         );
-        return r.value; // null אם לא נמצא/לא פתוח
+        return r.value;
     } finally {
         if (client) await client.close();
     }
@@ -142,10 +148,13 @@ export async function addSetDb(userId, sessionId, exerciseId, setData) {
         const db = client.db(DB_NAME);
         const col = db.collection(WORKOUTS);
 
-        const doc = await col.findOne({ _id: oid(sessionId), userId: oid(userId), status: 'open' });
-        if (!doc) return null;
+        const base = await col.findOne({ _id: oid(sessionId), userId: oid(userId) });
+        if (!base) return null;              // לא שייך למשתמש/לא קיים
+        if (base.status === 'closed') return 'CLOSED';
 
-        const exIdx = doc.exercises.findIndex((e) => String(e.exerciseId) === String(exerciseId));
+        // שלב 2: המשך כמו שהיה (לא צריך עוד פעם לשלוף עם status:'open')
+        const doc = base;
+        const exIdx = doc.exercises.findIndex(e => String(e.exerciseId) === String(exerciseId));
         if (exIdx === -1) return 'NO_EX';
 
         const next = (doc.exercises[exIdx].sets?.length || 0) + 1;
@@ -167,10 +176,13 @@ export async function updateSetDb(userId, sessionId, exerciseId, setNumber, setD
         const db = client.db(DB_NAME);
         const col = db.collection(WORKOUTS);
 
-        const doc = await col.findOne({ _id: oid(sessionId), userId: oid(userId), status: 'open' });
-        if (!doc) return null;
+        const base = await col.findOne({ _id: oid(sessionId), userId: oid(userId) });
+        if (!base) return null;              // לא שייך למשתמש/לא קיים
+        if (base.status === 'closed') return 'CLOSED';
 
-        const exIdx = doc.exercises.findIndex((e) => String(e.exerciseId) === String(exerciseId));
+        // שלב 2: המשך כמו שהיה (לא צריך עוד פעם לשלוף עם status:'open')
+        const doc = base;
+        const exIdx = doc.exercises.findIndex(e => String(e.exerciseId) === String(exerciseId));
         if (exIdx === -1) return 'NO_EX';
 
         const sIdx = (doc.exercises[exIdx].sets || []).findIndex((s) => s.setNumber === setNumber);
@@ -192,10 +204,13 @@ export async function removeSetDb(userId, sessionId, exerciseId, setNumber) {
         const db = client.db(DB_NAME);
         const col = db.collection(WORKOUTS);
 
-        const doc = await col.findOne({ _id: oid(sessionId), userId: oid(userId), status: 'open' });
-        if (!doc) return null;
+        const base = await col.findOne({ _id: oid(sessionId), userId: oid(userId) });
+        if (!base) return null;              // לא שייך למשתמש/לא קיים
+        if (base.status === 'closed') return 'CLOSED';
 
-        const exIdx = doc.exercises.findIndex((e) => String(e.exerciseId) === String(exerciseId));
+        // שלב 2: המשך כמו שהיה (לא צריך עוד פעם לשלוף עם status:'open')
+        const doc = base;
+        const exIdx = doc.exercises.findIndex(e => String(e.exerciseId) === String(exerciseId));
         if (exIdx === -1) return 'NO_EX';
 
         const filtered = (doc.exercises[exIdx].sets || []).filter((s) => s.setNumber !== setNumber);

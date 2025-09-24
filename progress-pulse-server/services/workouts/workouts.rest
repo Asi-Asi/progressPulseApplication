@@ -1,66 +1,62 @@
-### יצירת סשן להיום מתוך תוכנית (fromPlanId + planDay)
-POST https://progresspulseapplication.onrender.com/api/workouts/sessions
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3MTc2MTUsImV4cCI6MTc1ODcxODUxNX0.iYywDDTJntRMHmaEFjGAi0s1AD9soMxfxRQymknihRI
+# for accesse token for user
+POST https://progresspulseapplication.onrender.com/api/users/login
 Content-Type: application/json
 
 {
-  "fromPlanId": "68d31289cfbe22f2c15df930",
-  "planDay": 1
+  "email": "demo+62@example.com",
+  "password": "newsecurepassword"
 }
 
-###
-# תצוגת סשן: planned + maxByExercise
-GET https://progresspulseapplication.onrender.com/api/workouts/sessions/REPLACE_SESSION_ID/view
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
 
 ###
-# הוספת תרגיל לסשן (אם לא קיים כבר ב-exercises)
-POST https://progresspulseapplication.onrender.com/api/workouts/sessions/REPLACE_SESSION_ID/exercises
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
+@host = https://progresspulseapplication.onrender.com
+@token = Bearer REPLACE_JWT
+@sessionId = REPLACE_SESSION_ID
+@exerciseId = REPLACE_EXERCISE_ID
+
+###
+# 1) מצב לפני – לראות שאין exercise ברשימת הביצוע (exercises)
+GET {{host}}/api/workouts/sessions/{{sessionId}}/view
+Authorization: {{token}}
+
+###
+# 2) הוספת התרגיל לסשן (אמור להחזיר 200 ושהתרגיל יופיע ב-exercises עם sets: [])
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
+Authorization: {{token}}
 Content-Type: application/json
 
-{
-  "exerciseId": "REPLACE_EXERCISE_ID"
-}
+{ "exerciseId": "{{exerciseId}}" }
 
 ###
-# הוספת סט (שמירה תוך כדי)
-POST https://progresspulseapplication.onrender.com/api/workouts/sessions/REPLACE_SESSION_ID/exercises/REPLACE_EXERCISE_ID/sets
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
+# 3) Idempotent – שוב אותה בקשה (אמור להחזיר 200 ללא כפילות)
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
+Authorization: {{token}}
 Content-Type: application/json
 
-{
-  "reps": 10,
-  "weight": 40
-}
+{ "exerciseId": "{{exerciseId}}" }
 
 ###
-# עדכון סט מס' 1 (שמירה תוך כדי)
-PUT https://progresspulseapplication.onrender.com/api/workouts/sessions/REPLACE_SESSION_ID/exercises/REPLACE_EXERCISE_ID/sets/1
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
+# 4) אימות אחרי – התרגיל צריך להופיע ב-exercises
+GET {{host}}/api/workouts/sessions/{{sessionId}}/view
+Authorization: {{token}}
+
+###
+# 5) סגירת הסשן
+POST {{host}}/api/workouts/sessions/{{sessionId}}/close
+Authorization: {{token}}
+
+###
+# 6) ניסיון הוספה אחרי סגירה – אמור להחזיר 409 Session is closed
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
+Authorization: {{token}}
 Content-Type: application/json
 
-{
-  "reps": 8,
-  "weight": 45
-}
+{ "exerciseId": "{{exerciseId}}" }
 
 ###
-# מחיקת סט מס' 1 (שמירה תוך כדי)
-DELETE https://progresspulseapplication.onrender.com/api/workouts/sessions/REPLACE_SESSION_ID/exercises/REPLACE_EXERCISE_ID/sets/1
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
+# 7) קלט שגוי – אמור להחזיר 400 Invalid ids
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
+Authorization: {{token}}
+Content-Type: application/json
 
-###
-# סגירת סשן (Finish Workout)
-POST https://progresspulseapplication.onrender.com/api/workouts/sessions/REPLACE_SESSION_ID/close
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
-
-###
-# היסטוריית אימונים (עם עמודיות וסינונים אופציונליים)
-GET https://progresspulseapplication.onrender.com/api/workouts/history?limit=20&skip=0&from=2025-09-01&to=2025-09-30
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
-
-###
-# שליפת אימון סגור לפי מזהה
-GET https://progresspulseapplication.onrender.com/api/workouts/history/REPLACE_WORKOUT_ID
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
+{ "exerciseId": "NOT_AN_OBJECT_ID" }

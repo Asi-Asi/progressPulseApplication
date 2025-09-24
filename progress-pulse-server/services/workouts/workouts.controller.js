@@ -6,6 +6,16 @@ import {
     closeSessionDb, maxByExercise, listHistoryDb
 } from './workouts.db.js';
 
+
+// Get today's open session (if any)
+export async function getTodaySession(req, res, next) {
+    try {
+        const session = await getTodayOpenSession(req.user._id);
+        // מחזיר null אם אין סשן פתוח להיום
+        return res.json(session || null);
+    } catch (err) { next(err); }
+}
+// Create a new session from a plan's day (if not already open today)
 export async function createSessionFromPlan(req,res,next){
     const userId = req.user._id;
     const { fromPlanId, planDay } = req.body||{};
@@ -34,12 +44,15 @@ export async function getSessionView(req,res,next){
     } catch(err){ next(err); }
 }
 
+
+
 export async function addExerciseToSession(req,res,next){
     const userId = req.user._id; const { sessionId } = req.params; const { exerciseId } = req.body||{};
     if(!ObjectId.isValid(sessionId) || !ObjectId.isValid(exerciseId)) return res.status(400).json({ message:'Invalid ids' });
     try{
         const val = await addExercise(userId, sessionId, exerciseId);
-        if(val===null) return res.status(404).json({ message:'Session not found or not open' });
+        if (val === 'CLOSED') return res.status(409).json({ message: 'Session is closed' });
+        if (val === null) return res.status(404).json({ message: 'Session not found' });
         res.json(val);
     } catch(err){ next(err); }
 }
@@ -100,6 +113,9 @@ export async function getMyWorkoutById(req,res,next){
         res.json(session);
     } catch(err){ next(err); }
 }
+
+
+
 
 // Coach (נשאר כמו קודם – שימוש בבדיקת גישה שלך)
 export async function listTraineeHistory(req,res,next){ /* ... כמו שהצגתי לך קודם ... */ }

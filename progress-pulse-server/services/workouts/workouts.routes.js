@@ -5,7 +5,7 @@ import {
     addExerciseToSession, addSet, updateSet, removeSet,
     closeSessionWithResults,
     listMyHistory, getMyWorkoutById,
-    listTraineeHistory, getTraineeWorkoutById,
+    listTraineeHistory, getTraineeWorkoutById, getTodaySession
 } from './workouts.controller.js';
 
 const workoutRouter = express.Router();
@@ -16,6 +16,7 @@ workoutRouter
     // Sessions 
     .post('/sessions', createSessionFromPlan)                  // fromPlanId + planDay
     .get('/sessions/:sessionId/view', getSessionView)         // planned + maxByExercise
+    .get('/sessions/today', getTodaySession)
 
     // Live tracking (Auto-save)
     .post('/sessions/:sessionId/exercises', addExerciseToSession)

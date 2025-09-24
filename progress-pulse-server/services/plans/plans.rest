@@ -9,3 +9,19 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5M
   ],
   "locked": true
 }
+
+
+
+###
+# עדכון תוכנית אישית (למשתמש)
+PUT https://progresspulseapplication.onrender.com/api/plans/me
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3MTc2MTUsImV4cCI6MTc1ODcxODUxNX0.iYywDDTJntRMHmaEFjGAi0s1AD9soMxfxRQymknihRI
+
+{
+  "days": [
+    { "exercises": [ { "exerciseId": "66f130bd3d9b4c7d5a9a7e13", "sets": 3 } ] },
+    { "exercises": [ { "exerciseId": "66f130bd3d9b4c7d5a9a7e52", "sets": 4 } ] }
+  ],
+  "locked": true
+}
