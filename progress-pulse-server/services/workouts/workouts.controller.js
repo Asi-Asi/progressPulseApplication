@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb';
 import { validateOpen, validateSetPayload } from './workouts.model.js';
 import {
     getTodayOpenSession, snapshotPlanDay, createOpenSession, getSession,
-    addExercise, addSetDb, updateSetDb, removeSetDb,
+    addExercise, removeExerciseDb, addSetDb, updateSetDb, removeSetDb,
     closeSessionDb, maxByExercise, listHistoryDb
 } from './workouts.db.js';
 
@@ -74,8 +74,9 @@ export async function addSet(req,res,next){
     const { reps, weight } = req.body||{}; const e = validateSetPayload({ reps, weight }); if(e) return res.status(400).json({ message:e });
     try{
         const val = await addSetDb(userId, sessionId, exerciseId, { reps, weight });
-        if(val==='NO_EX') return res.status(404).json({ message:'Exercise not in session' });
-        if(!val) return res.status(404).json({ message:'Session not found or not open' });
+        if (val === 'CLOSED') return res.status(409).json({ message: 'Session is closed' });
+        if (val === 'NO_EX')  return res.status(404).json({ message:'Exercise not in session' });
+        if (!val)             return res.status(404).json({ message:'Session not found' });
         res.json(val);
     } catch(err){ next(err); }
 }
@@ -85,6 +86,7 @@ export async function updateSet(req,res,next){
     const { reps, weight } = req.body||{}; const e = validateSetPayload({ reps, weight }); if(e) return res.status(400).json({ message:e });
     try{
         const val = await updateSetDb(userId, sessionId, exerciseId, Number(setNumber), { reps, weight });
+        if (val === 'CLOSED') return res.status(409).json({ message: 'Session is closed' });
         if(val==='NO_EX') return res.status(404).json({ message:'Exercise not in session' });
         if(val==='NO_SET') return res.status(404).json({ message:'Set not found' });
         if(!val) return res.status(404).json({ message:'Session not found or not open' });
@@ -96,6 +98,7 @@ export async function removeSet(req,res,next){
     const userId = req.user._id; const { sessionId, exerciseId, setNumber } = req.params;
     try{
         const val = await removeSetDb(userId, sessionId, exerciseId, Number(setNumber));
+        if (val === 'CLOSED') return res.status(409).json({ message: 'Session is closed' });
         if(val==='NO_EX') return res.status(404).json({ message:'Exercise not in session' });
         if(!val) return res.status(404).json({ message:'Session not found or not open' });
         res.json(val);

@@ -1,12 +1,11 @@
 @host = https://progresspulseapplication.onrender.com
 # Paste your JWT after login (keep the "Bearer " prefix)
-@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3NDE2MzMsImV4cCI6MTc1ODc0MjUzM30.Z0qK3BKkQF3wLiDE3LexBmOTEjIbYNwpnHfSx4rBSkY
-
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3NDkwNDIsImV4cCI6MTc1ODc0OTk0Mn0.gXvYBLU26SE5Dtkh8xuvd4fLQJQ6kVY7QoxHEgCUvy0
 # Set after GET /api/plans/me (value of _id)
 @planId = 68d31289cfbe22f2c15df930
 
 # Set after POST /api/workouts/sessions (value of _id in response)
-@sessionId = 68d4471df678f9e8f1986983
+@sessionId = 68d4471df678f9e8f1986984
 
 # Set from the plan's day you chose (or from the /view response)
 @exerciseId = 66f130bd3d9b4c7d5a9a7e13
@@ -46,7 +45,7 @@ Content-Type: application/json
 
 {
   "fromPlanId": "{{planId}}",
-  "planDay": 2
+  "planDay": 1
 }
 
 ###
@@ -108,6 +107,24 @@ Content-Type: application/json
 # 8) Delete set #1 (live)
 ############################################################
 DELETE {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets/1
+Authorization: {{token}}
+
+
+
+############################################################
+# Remove an exercise from an open session
+############################################################
+# (if you added it by mistake, or changed your mind)
+DELETE https://progresspulseapplication.onrender.com/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}
+Authorization: {{token}}
+
+
+
+############################################################
+# 8a) Verify it's gone from the session view
+############################################################
+# Verify it’s gone
+GET https://progresspulseapplication.onrender.com/api/workouts/sessions/{{sessionId}}/view
 Authorization: {{token}}
 
 
