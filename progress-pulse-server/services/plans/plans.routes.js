@@ -8,7 +8,7 @@ const plansRouter = express.Router();
 plansRouter.use(requireAuth);
 
 plansRouter
-    // Get current plan for the authenticated user
+    // Returns the current user's plan and the planId to be used for creating a workout session
     .get('/me', getMyPlan)
 
     // Overwrite (upsert) the current user's plan on "Finish Plan"

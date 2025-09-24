@@ -1,5 +1,20 @@
-# for accesse token for user
-POST https://progresspulseapplication.onrender.com/api/users/login
+@host = https://progresspulseapplication.onrender.com
+# Paste your JWT after login (keep the "Bearer " prefix)
+@token = Bearer PASTE_YOUR_JWT_HERE
+
+# Set after GET /api/plans/me (value of _id)
+@planId = PASTE_PLAN_ID_HERE
+
+# Set after POST /api/workouts/sessions (value of _id in response)
+@sessionId = PASTE_SESSION_ID_HERE
+
+# Set from the plan's day you chose (or from the /view response)
+@exerciseId = PASTE_EXERCISE_ID_HERE
+
+############################################################
+# 0) Login (get a JWT)
+############################################################
+POST {{host}}/api/users/login
 Content-Type: application/json
 
 {
@@ -7,20 +22,58 @@ Content-Type: application/json
   "password": "newsecurepassword"
 }
 
+###
+# After login: copy the token from the response and paste it into @token above.
+
+
+############################################################
+# 1) Get the current user's plan (to grab the planId and exercise ids)
+############################################################
+GET {{host}}/api/plans/me
+Authorization: {{token}}
 
 ###
-@host = https://progresspulseapplication.onrender.com
-@token = Bearer REPLACE_JWT
-@sessionId = REPLACE_SESSION_ID
-@exerciseId = REPLACE_EXERCISE_ID
+# Copy the "_id" into @planId above.
+# Pick a dayNumber and an exerciseId from the response.
+
+
+############################################################
+# 2) Open today's session from plan day
+############################################################
+POST {{host}}/api/workouts/sessions
+Authorization: {{token}}
+Content-Type: application/json
+
+{
+  "fromPlanId": "{{planId}}",
+  "planDay": 1
+}
 
 ###
-# 1) מצב לפני – לראות שאין exercise ברשימת הביצוע (exercises)
+# Copy the returned "_id" into @sessionId above.
+
+
+############################################################
+# 3) Get session view (planned + maxByExercise)
+############################################################
 GET {{host}}/api/workouts/sessions/{{sessionId}}/view
 Authorization: {{token}}
 
 ###
-# 2) הוספת התרגיל לסשן (אמור להחזיר 200 ושהתרגיל יופיע ב-exercises עם sets: [])
+# Confirm planned shows your chosen exercise.
+# If @exerciseId not set yet, copy one exerciseId from "planned" here into @exerciseId above.
+
+
+############################################################
+# 4) (Optional) Get today's open session quickly
+############################################################
+GET {{host}}/api/workouts/sessions/today
+Authorization: {{token}}
+
+
+############################################################
+# 5) Add exercise to the session (so we can track sets)
+############################################################
 POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
 Authorization: {{token}}
 Content-Type: application/json
@@ -28,35 +81,69 @@ Content-Type: application/json
 { "exerciseId": "{{exerciseId}}" }
 
 ###
-# 3) Idempotent – שוב אותה בקשה (אמור להחזיר 200 ללא כפילות)
-POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
+# Idempotent: running again won't duplicate.
+
+
+############################################################
+# 6) Add a set (live save)
+############################################################
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets
 Authorization: {{token}}
 Content-Type: application/json
 
-{ "exerciseId": "{{exerciseId}}" }
+{ "reps": 10, "weight": 40 }
 
-###
-# 4) אימות אחרי – התרגיל צריך להופיע ב-exercises
-GET {{host}}/api/workouts/sessions/{{sessionId}}/view
+
+############################################################
+# 7) Update set #1 (live)
+############################################################
+PUT {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets/1
+Authorization: {{token}}
+Content-Type: application/json
+
+{ "reps": 8, "weight": 45 }
+
+
+############################################################
+# 8) Delete set #1 (live)
+############################################################
+DELETE {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets/1
 Authorization: {{token}}
 
+
+############################################################
+# 9) Add again and then close session (Finish Workout)
+############################################################
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets
+Authorization: {{token}}
+Content-Type: application/json
+
+{ "reps": 10, "weight": 40 }
+
 ###
-# 5) סגירת הסשן
 POST {{host}}/api/workouts/sessions/{{sessionId}}/close
 Authorization: {{token}}
 
-###
-# 6) ניסיון הוספה אחרי סגירה – אמור להחזיר 409 Session is closed
-POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
+
+############################################################
+# 10) Negative test: try to add after close (expect 409)
+############################################################
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets
 Authorization: {{token}}
 Content-Type: application/json
 
-{ "exerciseId": "{{exerciseId}}" }
+{ "reps": 5, "weight": 20 }
 
-###
-# 7) קלט שגוי – אמור להחזיר 400 Invalid ids
-POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
+
+############################################################
+# 11) My history (paging + optional date filters)
+############################################################
+GET {{host}}/api/workouts/history?limit=20&skip=0&from=2025-09-01&to=2025-09-30
 Authorization: {{token}}
-Content-Type: application/json
 
-{ "exerciseId": "NOT_AN_OBJECT_ID" }
+
+############################################################
+# 12) Single closed workout by id (use the same sessionId if you closed it)
+############################################################
+GET {{host}}/api/workouts/history/{{sessionId}}
+Authorization: {{token}}

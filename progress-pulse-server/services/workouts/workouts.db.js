@@ -80,7 +80,6 @@ export async function createOpenSession(userId, fromPlanId, planDay, planned) {
         const doc = {
         userId: oid(userId),
         date: ymd(),
-        startedAt: new Date().toISOString(),
         status: 'open',
         fromPlanId: oid(fromPlanId),
         planDay,
@@ -233,7 +232,7 @@ export async function closeSessionDb(userId, sessionId) {
 
         const r = await col.findOneAndUpdate(
         { _id: oid(sessionId), userId: oid(userId), status: 'open' },
-        { $set: { status: 'closed', endedAt: new Date().toISOString() } },
+        { $set: { status: 'closed' } },
         { returnDocument: 'after' }
         );
         return r.value; // null אם כבר סגור/לא נמצא
