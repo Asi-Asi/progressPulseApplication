@@ -75,7 +75,7 @@ export async function isExerciseInUse(exId) {
   try {
     client = await MongoClient.connect(CN_STR);
     const db = client.db(DB_NAME);
-    const count = await db.collection(PLANS_COL).countDocuments({
+    const count = await db.collection(COLLECTION).countDocuments({
       'days.exercises.exerciseId': new ObjectId(exId),
     }, { limit: 1 });
     return count > 0;
