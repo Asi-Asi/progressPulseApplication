@@ -54,3 +54,10 @@ export function requireAdmin(req, res, next) {
   if (lvl === 10) return next();
   return res.status(403).json({ message: 'Forbidden' });
 }
+
+// Allow only coaches (role level 30) and admins (role level 10)
+export function requireCoach(req, res, next) {
+  const level = req.user?.rlv ?? 0;
+  if (level === 30 || level === 10) return next(); // Coach or Admin
+  return res.status(403).json({ message: 'Forbidden' });
+}
