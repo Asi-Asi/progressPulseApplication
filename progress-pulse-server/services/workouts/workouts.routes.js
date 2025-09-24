@@ -2,7 +2,7 @@ import express from 'express';
 import { requireAuth, requireCoach } from '../auth/auth.middleware.js';
 import {
     createSessionFromPlan, getSessionView,
-    addExerciseToSession, addSet, updateSet, removeSet,
+    addExerciseToSession, removeExercise, addSet, updateSet, removeSet,
     closeSessionWithResults,
     listMyHistory, getMyWorkoutById,
     listTraineeHistory, getTraineeWorkoutById, getTodaySession
@@ -27,6 +27,9 @@ workoutRouter
 
     // to add an exercise to the session 
     .post('/sessions/:sessionId/exercises', addExerciseToSession) // body : { "exerciseId": "<EXERCISE_ID>" }
+
+    .delete('/sessions/:sessionId/exercises/:exerciseId', removeExercise)   
+
 
     // To add sets for an exercise in the session
     .post('/sessions/:sessionId/exercises/:exerciseId/sets', addSet) // body : { "reps": <number>, "weight": <number> }

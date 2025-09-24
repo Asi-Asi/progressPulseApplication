@@ -57,6 +57,18 @@ export async function addExerciseToSession(req,res,next){
     } catch(err){ next(err); }
 }
 
+
+export async function removeExercise(req, res, next) {
+    const userId = req.user._id;
+    const { sessionId, exerciseId } = req.params;
+    try {
+        const val = await removeExerciseDb(userId, sessionId, exerciseId);
+        if (val === 'CLOSED') return res.status(409).json({ message: 'Session is closed' });
+        if (!val)             return res.status(404).json({ message: 'Session not found' });
+        res.json(val); // מחזיר את הסשן לאחר המחיקה
+    } catch (err) { next(err); }
+}
+
 export async function addSet(req,res,next){
     const userId = req.user._id; const { sessionId, exerciseId } = req.params;
     const { reps, weight } = req.body||{}; const e = validateSetPayload({ reps, weight }); if(e) return res.status(400).json({ message:e });

@@ -139,6 +139,26 @@ export async function addExercise(userId, sessionId, exerciseId) {
 }
 
 
+export async function removeExerciseDb(userId, sessionId, exerciseId) {
+    let client = null;
+    try {
+        client = await MongoClient.connect(CN_STR);
+        const db = client.db(DB_NAME);
+        const col = db.collection(WORKOUTS);
+
+        const base = await col.findOne({ _id: oid(sessionId), userId: oid(userId) });
+        if (!base) return null;
+        if (base.status === 'closed') return 'CLOSED';
+
+        const filtered = (base.exercises || []).filter(e => String(e.exerciseId) !== String(exerciseId));
+        await col.updateOne({ _id: base._id }, { $set: { exercises: filtered } });
+        return await col.findOne({ _id: base._id });
+    } finally {
+        if (client) await client.close();
+    }
+}
+
+
 
 export async function addSetDb(userId, sessionId, exerciseId, setData) {
     let client = null;

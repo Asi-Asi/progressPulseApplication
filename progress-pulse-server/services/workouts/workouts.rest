@@ -1,15 +1,15 @@
 @host = https://progresspulseapplication.onrender.com
 # Paste your JWT after login (keep the "Bearer " prefix)
-@token = Bearer PASTE_YOUR_JWT_HERE
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3NDE2MzMsImV4cCI6MTc1ODc0MjUzM30.Z0qK3BKkQF3wLiDE3LexBmOTEjIbYNwpnHfSx4rBSkY
 
 # Set after GET /api/plans/me (value of _id)
-@planId = PASTE_PLAN_ID_HERE
+@planId = 68d31289cfbe22f2c15df930
 
 # Set after POST /api/workouts/sessions (value of _id in response)
-@sessionId = PASTE_SESSION_ID_HERE
+@sessionId = 68d4471df678f9e8f1986983
 
 # Set from the plan's day you chose (or from the /view response)
-@exerciseId = PASTE_EXERCISE_ID_HERE
+@exerciseId = 66f130bd3d9b4c7d5a9a7e13
 
 ############################################################
 # 0) Login (get a JWT)
@@ -46,7 +46,7 @@ Content-Type: application/json
 
 {
   "fromPlanId": "{{planId}}",
-  "planDay": 1
+  "planDay": 2
 }
 
 ###
