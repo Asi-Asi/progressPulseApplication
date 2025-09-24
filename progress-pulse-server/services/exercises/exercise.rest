@@ -11,7 +11,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5M
 
 POST https://progresspulseapplication.onrender.com/api/exercises
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxNDMxMGFhYTRhM2EwMTcxYjUiLCJybHYiOjEwLCJpYXQiOjE3NTg2NzM3MTEsImV4cCI6MTc1ODY3NDYxMX0.sPtPtaYTgamXiP1V1FSbdd6l46JipVB6HgqUHkBI6Ew
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxNDMxMGFhYTRhM2EwMTcxYjUiLCJybHYiOjEwLCJpYXQiOjE3NTg3MDQwMzYsImV4cCI6MTc1ODcwNDkzNn0.lg9r3djW22P6QoDHKmaISA24qJ74bS4yFahWVTht6Uc
 
 {
   "name": "Cable Crossover",
@@ -24,4 +24,4 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxN
 
 ### מחיקה עם אדמין
 DELETE https://progresspulseapplication.onrender.com/api/exercises/68d323efcfbe22f2c15df947
-Authorization: Bearer <ADMIN_ACCESS_TOKEN
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxNDMxMGFhYTRhM2EwMTcxYjUiLCJybHYiOjEwLCJpYXQiOjE3NTg3MDQwMzYsImV4cCI6MTc1ODcwNDkzNn0.lg9r3djW22P6QoDHKmaISA24qJ74bS4yFahWVTht6Uc

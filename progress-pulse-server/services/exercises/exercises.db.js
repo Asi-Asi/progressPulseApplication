@@ -91,7 +91,7 @@ export async function deleteExerciseById(id) {
   try {
     client = await MongoClient.connect(CN_STR);
     const db = client.db(DB_NAME);
-    const res = await db.collection(EX_COL).deleteOne({ _id: new ObjectId(id) });
+    const res = await db.collection(COLLECTION).deleteOne({ _id: new ObjectId(id) });
     return res.deletedCount > 0;
   } finally {
     if (client) await client.close();
