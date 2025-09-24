@@ -1,5 +1,5 @@
 import { insertExercise ,findExercises, findExerciseById } from './exercises.db.js';
-import { validateListQuery, normalizeNameRegex, isValidObjectIdString } from './exercises.model.js';
+import { validateListQuery, normalizeNameRegex, isValidObjectIdString, validateExerciseDoc } from './exercises.model.js';
 
 // GET /api/exercises
 export async function listExercises(req, res) {
