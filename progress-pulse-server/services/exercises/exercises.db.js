@@ -68,3 +68,32 @@ export async function insertExercise(doc) {
     if (client) await client.close();
   }
 }
+
+
+export async function isExerciseInUse(exId) {
+  let client = null;
+  try {
+    client = await MongoClient.connect(CN_STR);
+    const db = client.db(DB_NAME);
+    const count = await db.collection(PLANS_COL).countDocuments({
+      'days.exercises.exerciseId': new ObjectId(exId),
+    }, { limit: 1 });
+    return count > 0;
+  } finally {
+    if (client) await client.close();
+  }
+}
+
+
+
+export async function deleteExerciseById(id) {
+  let client = null;
+  try {
+    client = await MongoClient.connect(CN_STR);
+    const db = client.db(DB_NAME);
+    const res = await db.collection(EX_COL).deleteOne({ _id: new ObjectId(id) });
+    return res.deletedCount > 0;
+  } finally {
+    if (client) await client.close();
+  }
+}

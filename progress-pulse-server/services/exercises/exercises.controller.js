@@ -1,4 +1,4 @@
-import { insertExercise ,findExercises, findExerciseById } from './exercises.db.js';
+import { insertExercise ,findExercises, findExerciseById, deleteExerciseById,isExerciseInUse  } from './exercises.db.js';
 import { validateListQuery, normalizeNameRegex, isValidObjectIdString, validateExerciseDoc } from './exercises.model.js';
 
 // GET /api/exercises
@@ -54,6 +54,28 @@ export async function createExercise(req, res) {
     return res.status(201).json(exercise);
   } catch (err) {
     console.error('createExercise error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+}
+
+
+
+// DELETE /api/exercises/:id  (admin only)
+export async function deleteExercise(req, res) {
+  try {
+    const id = String(req.params.id || '');
+    if (!isValidObjectIdString(id)) return res.status(400).json({ message: 'Invalid id' });
+
+    // prevent deleting exercises referenced by any plan
+    const inUse = await isExerciseInUse(id);
+    if (inUse) return res.status(409).json({ message: 'Exercise is referenced by existing plans' });
+
+    const ok = await deleteExerciseById(id);
+    if (!ok) return res.status(404).json({ message: 'Not found' });
+
+    return res.status(204).send();
+  } catch (err) {
+    console.error('deleteExercise error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
 }

@@ -11,7 +11,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5M
 
 POST https://progresspulseapplication.onrender.com/api/exercises
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxNDMxMGFhYTRhM2EwMTcxYjUiLCJybHYiOjEwLCJpYXQiOjE3NTg2NzE5ODQsImV4cCI6MTc1ODY3Mjg4NH0.xGdnjmSp84N68oKuj7A7nepR6xILTCWGkiB-6tOKPcg
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxNDMxMGFhYTRhM2EwMTcxYjUiLCJybHYiOjEwLCJpYXQiOjE3NTg2NzM3MTEsImV4cCI6MTc1ODY3NDYxMX0.sPtPtaYTgamXiP1V1FSbdd6l46JipVB6HgqUHkBI6Ew
 
 {
   "name": "Cable Crossover",
@@ -19,3 +19,9 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxN
   "type": "Isolation",
   "equipment": "Cable"
 }
+
+
+
+### מחיקה עם אדמין
+DELETE https://progresspulseapplication.onrender.com/api/exercises/68d323efcfbe22f2c15df947
+Authorization: Bearer <ADMIN_ACCESS_TOKEN
