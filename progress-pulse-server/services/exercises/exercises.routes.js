@@ -1,6 +1,6 @@
 import express from 'express';
-import { requireAuth } from '../auth/auth.middleware.js';
-import { listExercises, getExerciseById, createExercise } from './exercises.controller.js';
+import { requireAuth, requireAdmin } from '../auth/auth.middleware.js';
+import { listExercises, getExerciseById , createExercise } from './exercises.controller.js';
 
 const exercisesRouter = express.Router();
 
@@ -17,7 +17,7 @@ exercisesRouter
 
 // POST /api/exercises  (admin only)
 // Create (admin only)
-.post('/', createExercise)
+.post('/', requireAdmin, createExercise)
 
 
 export default exercisesRouter;

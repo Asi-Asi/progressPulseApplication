@@ -44,6 +44,16 @@ Content-Type: application/json
   "password": "newsecurepassword"
 }
 
+###
+
+POST https://progresspulseapplication.onrender.com/api/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "123123"
+}
+
 
 
 ###
