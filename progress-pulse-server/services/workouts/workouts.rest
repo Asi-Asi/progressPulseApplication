@@ -1,10 +1,10 @@
 ### יצירת סשן להיום מתוך תוכנית (fromPlanId + planDay)
 POST https://progresspulseapplication.onrender.com/api/workouts/sessions
-Authorization: Bearer REPLACE_WITH_YOUR_JWT
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3MTc2MTUsImV4cCI6MTc1ODcxODUxNX0.iYywDDTJntRMHmaEFjGAi0s1AD9soMxfxRQymknihRI
 Content-Type: application/json
 
 {
-  "fromPlanId": "REPLACE_PLAN_ID",
+  "fromPlanId": "68d31289cfbe22f2c15df930",
   "planDay": 1
 }
 

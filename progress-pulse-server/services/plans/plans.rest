@@ -1,6 +1,6 @@
-GET https://progresspulseapplication.onrender.com/api/plans/me
+GET   https://progresspulseapplication.onrender.com/api/plans/me
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2NjMyNzksImV4cCI6MTc1ODY2NDE3OX0.Kl5NGuwspynIILQb7_in1szT98FupiPkD5H5O7cP460
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3MTc2MTUsImV4cCI6MTc1ODcxODUxNX0.iYywDDTJntRMHmaEFjGAi0s1AD9soMxfxRQymknihRI
 
 {
   "days": [

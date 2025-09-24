@@ -55,7 +55,9 @@ export async function snapshotPlanDay(userId, fromPlanId, planDay) {
         });
         if (!plan) return null;
 
-        const day = plan.days?.find?.((d) => d.day === planDay);
+        const day = (plan.days || []).find(
+            (d) => d.day === planDay || d.dayNumber === planDay
+        );
         if (!day) return null;
 
         return (day.exercises || []).map((e) => ({
