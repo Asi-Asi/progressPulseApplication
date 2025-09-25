@@ -32,7 +32,7 @@ export default function   SignupForm({ onSubmit }) {
       alertFn('Missing info', 'Please fill first name, last name, email and password.');
       return;
     }
-    if (!sex) {
+    if (!gender) {
       alertFn('Missing info', 'Please choose Male or Female.');
       return;
     }
@@ -45,7 +45,7 @@ export default function   SignupForm({ onSubmit }) {
         name: `${firstName} ${lastName}`.trim(),   // ← add this
         firstName: firstName.trim(),
         lastName : lastName.trim(),
-        sex,
+        gender,
         email    : email.trim().toLowerCase(),
         password,
       };

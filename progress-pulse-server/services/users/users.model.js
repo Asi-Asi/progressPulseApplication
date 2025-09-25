@@ -14,7 +14,7 @@ function nowLocalISO(tz = 'Asia/Jerusalem') {
     const MM   = pad(local.getMinutes());
     const SS   = pad(local.getSeconds());
     // בלי אופסט; מציין את ה‑tz בשדה נפרד
-    return `${yyyy}-${mm}-${dd}T${HH}:${MM}:${SS}`;
+    return `${yyyy}-${mm}-${dd} ==> T ${HH}:${MM}:${SS}`;
 }
 
 export default class User{
