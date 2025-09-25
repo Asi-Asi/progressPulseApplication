@@ -29,9 +29,11 @@ POST https://progresspulseapplication.onrender.com/api/users/register
 Content-Type: application/json
 
 {
-  "name": "demo",
-  "email": "test700@example.com",
-  "password": "securepassword"
+  "firstName": "demo",
+  "lastName": "user",
+  "email": "test701@example.com",
+  "password": "securepassword",
+  "gender": "male"
 }
 ###
 

@@ -13,7 +13,7 @@ export default class User{
     this.email     = email?.trim().toLowerCase();
     this.password  =  password; // 10 מספיק ומהיר
     this.roleLevel = roleLevel ?? Roles. TRAINEE;
-    this.createdAt = toLocal(new Date());
+    this.createdAt = new Date();
     }
 
     static async getAllUsers() {
