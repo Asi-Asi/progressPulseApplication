@@ -24,8 +24,8 @@ import {
 
 // If your workouts db uses different names — adjust the imports accordingly.
 import {
-  listWorkoutsByUserId,   // (filter, {limit, skip}) -> Workout[]
-  getWorkoutById,         // (workoutId) -> Workout | null
+  listHistoryDb,   // (filter, {limit, skip}) -> Workout[]
+  getSession,         // (workoutId) -> Workout | null
 } from '../workouts/workouts.db.js';
 
 /* =========================================================
@@ -269,7 +269,7 @@ export async function getTraineeHistoryController(req, res) {
         if (to)   filter.performedAt.$lte = new Date(to);
         }
 
-        const items = await listWorkoutsByUserId(filter, {
+        const items = await listHistoryDb(filter, {
         limit: Number(limit),
         skip : Number(skip),
         });
@@ -292,7 +292,7 @@ export async function getTraineeWorkoutController(req, res) {
         return res.status(400).json({ message: 'Invalid workoutId' });
         }
 
-        const w = await getWorkoutById(workoutId);
+        const w = await getSession(workoutId);
         if (!w || String(w.userId) !== String(traineeId)) {
         return res.status(404).json({ message: 'Workout not found' });
         }

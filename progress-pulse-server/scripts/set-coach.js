@@ -2,7 +2,7 @@
 import 'dotenv/config';                  // ← טוען .env אוטומטית
 import { MongoClient } from 'mongodb';
 
-const email = 'test701@example.com';
+const email = 'test701@example.com'; // mail to give coach role
 const newRoleLevel = 30; // COACH
 
 const uri = process.env.CONNECTION_STRING;
@@ -41,3 +41,7 @@ run().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
+
+//run command
+//node scripts/set-coach.js
