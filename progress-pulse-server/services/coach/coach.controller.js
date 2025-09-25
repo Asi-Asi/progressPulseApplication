@@ -24,8 +24,9 @@ import {
 
 // If your workouts db uses different names — adjust the imports accordingly.
 import {
-  listHistoryDb,   // (filter, {limit, skip}) -> Workout[]
-  getSession,         // (workoutId) -> Workout | null
+    listHistoryDb,   // (filter, {limit, skip}) -> Workout[]
+    getSession,         // (workoutId) -> Workout | null
+    ymd
 } from '../workouts/workouts.db.js';
 
 /* =========================================================
@@ -262,19 +263,16 @@ export async function getTraineeHistoryController(req, res) {
         const { limit = 50, skip = 0, from, to } = req.query ?? {};
 
         // Build filter for DB
-        const filter = { userId: String(traineeId) };
-        if (from || to) {
-        filter.performedAt = {};
-        if (from) filter.performedAt.$gte = new Date(from);
-        if (to)   filter.performedAt.$lte = new Date(to);
-        }
+        const toY = v => v ? ymd(new Date(v)) : undefined;
 
-        const items = await listHistoryDb(filter, {
-        limit: Number(limit),
-        skip : Number(skip),
+        const { items, total } = await listHistoryDb(traineeId, {
+            from: toY(from),
+            to: toY(to),
+            limit: Number(limit),
+            skip: Number(skip)
         });
 
-        return res.json({ items, total: items.length });
+        return res.json({ items, total });
     } catch (e) {
         console.error('getTraineeHistoryController error:', e);
         return res.status(500).json({ message: 'Internal server error' });
