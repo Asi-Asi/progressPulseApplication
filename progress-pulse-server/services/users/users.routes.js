@@ -42,9 +42,9 @@ usersRouter
 
     
     //profile routes
-    usersRouter.get('/me', requireAuth, getMe)
-    usersRouter.put('/me', requireAuth, updateMe)
-    usersRouter.put('/me/password', requireAuth, changeMyPassword)
+    .get('/me', requireAuth, getMe)
+    .put('/me', requireAuth, updateMe)
+    .put('/me/password', requireAuth, changeMyPassword)
     
     
     // Admin routes
