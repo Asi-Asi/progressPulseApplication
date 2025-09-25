@@ -290,7 +290,7 @@ export async function getTraineeWorkoutController(req, res) {
         return res.status(400).json({ message: 'Invalid workoutId' });
         }
 
-        const w = await getSession(workoutId);
+        const w = await getSession(traineeId,workoutId);
         if (!w || String(w.userId) !== String(traineeId)) {
         return res.status(404).json({ message: 'Workout not found' });
         }

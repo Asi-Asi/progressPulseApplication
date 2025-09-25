@@ -4,7 +4,7 @@
 @traineeToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjIwLCJlbWFpbCI6ImRlbW8rNjJAZXhhbXBsZS5jb20iLCJpYXQiOjE3NTg4MTQxMTAsImV4cCI6MTc1ODgxNTAxMH0.YLpr9Kn2RpGp1fHHlkXQ5cigdj8y4aIWrWOLQII-2xE
 
 # הדבק כאן את ה-JWT של המאמן אחרי התחברות (כולל הקידומת "Bearer ")
-@coachToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQ1MWU0NTZhNjE3ZDc5MmViYWQ2M2EiLCJybHYiOjMwLCJlbWFpbCI6InRlc3Q3MDFAZXhhbXBsZS5jb20iLCJpYXQiOjE3NTg4MTQxMzIsImV4cCI6MTc1ODgxNTAzMn0.tpzHtcYy6nwh4Y9i-epgul8jWv1CVOHupo0HwUw8LLI
+@coachToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQ1MWU0NTZhNjE3ZDc5MmViYWQ2M2EiLCJybHYiOjMwLCJlbWFpbCI6InRlc3Q3MDFAZXhhbXBsZS5jb20iLCJpYXQiOjE3NTg4MjQzMzcsImV4cCI6MTc1ODgyNTIzN30.TU17z19DIn7VmVuyGho1ku0ynGL9M9ECiuHM34ezFrs
 
 # הגדר אחרי POST /api/coach/code/new או GET /api/coach/code
 @coachCode = HJH5T7D
@@ -16,7 +16,7 @@
 @traineeId = 68d25f9242b5ba424b71d361
 
 # הגדר אחרי GET /api/coach/trainees/{{traineeId}}/history (items[0]._id)
-@workoutId = <PASTE_WORKOUT_ID_HERE>
+@workoutId = 68d3eb4c34f33055b6ac94d7
 
 
 ############################################################
