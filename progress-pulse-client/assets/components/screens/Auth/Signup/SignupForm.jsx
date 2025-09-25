@@ -17,7 +17,7 @@ const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
 export default function   SignupForm({ onSubmit }) {
   const [firstName, setFirstName]   = useState('');       
   const [lastName, setLastName]     = useState('');          
-  const [sex, setSex]               = useState('');        
+  const [gender, setGender]         = useState('');
   const [email, setEmail]           = useState('');        
   const [password, setPassword]     = useState('');        
   const [loading, setLoading]       = useState(false);     
@@ -109,29 +109,29 @@ export default function   SignupForm({ onSubmit }) {
       {/* Sex (Male / Female) – styled like inputs */}
       <View className="w-full flex-row gap-3 mb-4">
         <TouchableOpacity
-          onPress={() => setSex('male')}
+          onPress={() => setGender('male')}
           disabled={loading}
           activeOpacity={0.9}
           className={`flex-1 px-4 py-3 rounded-xl border 
-            ${sex === 'male'
+            ${gender === 'male'
               ? 'bg-field border-primary'
               : 'bg-field border-fieldBorder'}`}
         >
-          <Text className={`${sex === 'male' ? 'text-primary' : 'text-text'} font-bold text-center`}>
+          <Text className={`${gender === 'male' ? 'text-primary' : 'text-text'} font-bold text-center`}>
             Male
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => setSex('female')}
+          onPress={() => setGender('female')}
           disabled={loading}
           activeOpacity={0.9}
           className={`flex-1 px-4 py-3 rounded-xl border 
-            ${sex === 'female'
+            ${gender === 'female'
               ? 'bg-field border-primary'
               : 'bg-field border-fieldBorder'}`}
         >
-          <Text className={`${sex === 'female' ? 'text-primary' : 'text-text'} font-bold text-center`}>
+          <Text className={`${gender === 'female' ? 'text-primary' : 'text-text'} font-bold text-center`}>
             Female
           </Text>
         </TouchableOpacity>
