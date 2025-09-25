@@ -1,11 +1,10 @@
 import jwt from 'jsonwebtoken';
 import User  from "./users.model.js";
 import bcrypt from 'bcrypt';
+import { ObjectId } from 'mongodb';
 import { Roles } from '../auth/roles.js';
-import { signAccessToken } from '../auth/auth.tokens.js';
 import { getByEmail as dbGetByEmail, createUser as dbCreateUser } from './users.db.js'; 
-//t
-import { signRefreshToken } from '../auth/auth.tokens.js';
+import { signRefreshToken, signAccessToken } from '../auth/auth.tokens.js';
 import { storeRefreshToken } from '../auth/refreshTokens.db.js';
 
 
@@ -31,7 +30,7 @@ export async function getAllUsers(req, res) {
 // register (fixed)
 export async function register(req, res) {
   try {
-    let { name = '', email, password } = req.body ?? {};
+    let {  email, password, firstName = '', lastName = '', gender = '' } = req.body ?? {};
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
@@ -47,31 +46,43 @@ export async function register(req, res) {
     const exists = await dbGetByEmail(email);
     if (exists) return res.status(409).json({ message: 'Email already registered' });
 
-    const passwordHash = bcrypt.hashSync(password, 10);
-    const saved = await dbCreateUser({ name, email, password: passwordHash });
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = new User({
+      firstName: String(firstName).trim(),
+      lastName: String(lastName).trim(),
+      gender,
+      email,
+      password: passwordHash,
+      roleLevel: Roles.TRAINEE
+    });
+    const saved = await dbCreateUser({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      gender: user.gender,
+      email: user.email,
+      password: user.password,
+      roleLevel: user.roleLevel,
+      createdAt: user.createdAt,
+    });
 
     // createUser returns the saved document with _id (not insertedId)
     const id = saved?._id?.toString?.();
+    
+
 
     return res.status(201).json({
       message: 'Registration successful',
-      role: 'user',
-      token: undefined,
-      user: { id, name, email }
+      role: 'trainee',
+      user: {id: String(id), firstName: user.firstName, lastName: user.lastName, email: user.email, roleLevel: user.roleLevel},
     });
   } catch (error) {
-      if (error?.code === 11000) {
-        console.error('Duplicate key on Users:', {
-        keyValue: error?.keyValue,
-        msg: error?.message
-      });
-        error.status = 409;
-        error.clientMessage = 'Email already in use';
-      } else {
-      console.error('Error creating user:', error?.code, error?.message);
-      }
-      throw error;
+    if (error?.code === 11000) {
+      console.error('Duplicate key on Users:', { keyValue: error?.keyValue, msg: error?.message });
+      return res.status(409).json({ message: 'Email already in use' }); 
     }
+    console.error('Error creating user:', error?.code, error?.message);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 }
 
 export async function login(req, res) {
@@ -87,7 +98,7 @@ export async function login(req, res) {
 
     if (adminEmail && adminPass && email === adminEmail && password === adminPass) {
       // Build payload aligned with the rest of the system (sub + rlv)
-      const adminUserMini = { _id: 'admin', roleLevel: Roles.ADMIN }; // logical identifier
+      const adminUserMini = { _id: 'admin', roleLevel: Roles.ADMIN, email: adminEmail }; // logical identifier
       const accessToken   = signAccessToken(adminUserMini);            // Access token
       const refreshToken  = signRefreshToken(adminUserMini);           // Refresh token
 
@@ -117,15 +128,21 @@ export async function login(req, res) {
     const ok = await bcrypt.compare(password, user.password); // your field is 'password' (hashed)
     if (!ok) return res.status(401).json({ message: 'Invalid email or password' });
 
-    // Issue both tokens
-    const accessToken  = signAccessToken(user);
-    const refreshToken = signRefreshToken(user);
+    const userMini = {
+      _id: user._id,
+      roleLevel: user.roleLevel ?? Roles.TRAINEE,  // safety default
+      email: user.email,
+    };
+
+
+    const accessToken  = signAccessToken(userMini);
+    const refreshToken = signRefreshToken(userMini);
 
     // Persist the refresh token in DB (with its expiration)
     const parsed    = jwt.decode(refreshToken);
     const expiresAt = parsed?.exp ? new Date(parsed.exp * 1000) : null;
     await storeRefreshToken({
-      userId: user._id,
+      userId: String(user._id),
       token: refreshToken,
       deviceId: req.headers['x-device-id'] || null, // optional device identifier
       expiresAt,
@@ -135,7 +152,7 @@ export async function login(req, res) {
       message: 'Login successful',
       accessToken,
       refreshToken,
-      user: { id: user._id, email: user.email, roleLevel: user.roleLevel }
+      user: { id: String(user._id), email: user.email, roleLevel: user.roleLevel }
     });
 
   } catch (error) {
@@ -212,7 +229,7 @@ export async function updateUserById(req, res) {
 //get my profile
 export async function getMe(req, res) {
   try {
-    const id = req.user?.sub;
+    const id = req.user?._id;
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -227,7 +244,7 @@ export async function getMe(req, res) {
 //update my profile
 export async function updateMe(req, res) {
   try {
-    const id = req.user?.sub;
+    const id = req.user?._id;
 
     // רק שדות שמותר למשתמש לשנות לעצמו
     const allowed = ['firstName', 'lastName', 'gender', 'email'];
@@ -271,7 +288,7 @@ export async function updateMe(req, res) {
 //change my password
 export async function changeMyPassword(req, res) {
   try {
-    const id = req.user?.sub;
+    const id = req.user?._id;
     const { currentPassword, newPassword } = req.body ?? {};
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ message: 'currentPassword and newPassword are required' });

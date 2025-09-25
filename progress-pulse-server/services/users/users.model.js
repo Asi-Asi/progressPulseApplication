@@ -1,4 +1,3 @@
-import bcrypt from 'bcrypt';
 import { createUser, getAll, getByEmail, deleteById, updateById, getById } from "./users.db.js";
 import { Roles } from '../auth/roles.js';
 
@@ -12,8 +11,8 @@ export default class User{
     this.lastName  = lastName?.trim()  || '';
     this.gender    = gender || '';
     this.email     = email?.trim().toLowerCase();
-    this.password  = bcrypt.hashSync(password, 10); // 10 מספיק ומהיר
-    this.roleLevel = roleLevel ?? Roles.USER;
+    this.password  =  password; // 10 מספיק ומהיר
+    this.roleLevel = roleLevel ?? Roles. TRAINEE;
     this.createdAt = toLocal(new Date());
     }
 

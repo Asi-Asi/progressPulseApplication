@@ -20,7 +20,6 @@ export async function getAll(){
 }
 
 
-let ensuredUsersIndexes = false; // דגל תהליכי – לוודא פעם אחת בלבד
 
 // Create a new user
 export async function createUser(user) {
@@ -30,7 +29,7 @@ export async function createUser(user) {
     const db = client.db(process.env.DB_NAME);
     const usersCol = db.collection('Users');
 
-    const result = await db.collection('Users').insertOne(user);
+    const result = await usersCol.insertOne(user);
 
     // החזר את המסמך שנשמר + ה-_id החדש
     return { ...user, _id: result.insertedId };

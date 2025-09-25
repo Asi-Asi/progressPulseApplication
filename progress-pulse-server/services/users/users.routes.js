@@ -1,7 +1,6 @@
 import {Router} from 'express';
 import {getAllUsers, login, register, deleteUserById,updateUserById, getMe, updateMe, changeMyPassword} from './users.controller.js';
-import { requireAuth, requireRole } from '../auth/auth.middleware.js';
-import { Roles } from '../auth/roles.js';
+import { requireAuth, requireAdmin } from '../auth/auth.middleware.js'; // ← use requireAdmin
 import { ObjectId } from 'mongodb';
 
 
@@ -49,9 +48,9 @@ usersRouter
     
     
     // Admin routes
-    .get('/',  requireAuth , requireRole(Roles.ADMIN),getAllUsers)
-    .put('/:id', requireAuth, requireRole(Roles.ADMIN), mustBeObjectId, validateUpdateBody, updateUserById)
-    .delete('/:id', requireAuth, requireRole(Roles.ADMIN), mustBeObjectId, deleteUserById)
+    .get('/',  requireAuth , requireAdmin,getAllUsers)
+    .put('/:id', requireAuth, requireAdmin, mustBeObjectId, validateUpdateBody, updateUserById)
+    .delete('/:id', requireAuth, requireAdmin, mustBeObjectId, deleteUserById)
 
 
 export default usersRouter;

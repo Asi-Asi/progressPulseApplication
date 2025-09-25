@@ -1,6 +1,6 @@
 @host = https://progresspulseapplication.onrender.com
 # Paste your JWT after login (keep the "Bearer " prefix)
-@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3NDkwNDIsImV4cCI6MTc1ODc0OTk0Mn0.gXvYBLU26SE5Dtkh8xuvd4fLQJQ6kVY7QoxHEgCUvy0
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3NTA5NjUsImV4cCI6MTc1ODc1MTg2NX0.-gMUi2e0Q8mhX_IG99Gbxk4w0S4smKJWwUCMOAWgb6k
 # Set after GET /api/plans/me (value of _id)
 @planId = 68d31289cfbe22f2c15df930
 
