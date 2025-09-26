@@ -1,4 +1,3 @@
-// app/.../BuildWorkoutPlanScreen.jsx
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
@@ -21,8 +20,8 @@ import { getMyPlan, saveMyPlan } from '../../../assets/api/plan.api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
-// role numbers: 10 admin, 20 trainee, 30 coach
-const ROLE_NUMBER = 20; // TODO: replace with your real user.role
+
+const ROLE_NUMBER = 20; 
 
 export default function BuildWorkoutPlanScreen() {
   const router = useRouter();
@@ -78,19 +77,19 @@ export default function BuildWorkoutPlanScreen() {
 
   async function handleSavePlan() {
     try {
-    const payload = actions.toServerPayload();
-    console.log('PUT /api/plans/me payload =', JSON.stringify(payload, null, 2));
-    await saveMyPlan({ token: accessToken, days: payload.days });
-    Alert.alert('Saved', 'Your plan was saved successfully');
-  } catch (e) {
-    console.log('saveMyPlan ERROR:', {
-      message: e?.message,
-      status: e?.status,
-      url: e?.url,
-      payload: e?.payload, // ⇐ זה ה־JSON המלא שהשרת החזיר (כולל פירוט הוולידציה)
-    });
-    Alert.alert('Error', e?.message || 'Failed to save plan');
-  } 
+      const payload = actions.toServerPayload();
+      console.log('PUT /api/plans/me payload =', JSON.stringify(payload, null, 2));
+      await saveMyPlan({ token: accessToken, days: payload.days });
+      Alert.alert('Saved', 'Your plan was saved successfully');
+    } catch (e) {
+      console.log('saveMyPlan ERROR:', {
+        message: e?.message,
+        status: e?.status,
+        url: e?.url,
+        payload: e?.payload, // ⇐ זה ה־JSON המלא שהשרת החזיר (כולל פירוט הוולידציה)
+      });
+      Alert.alert('Error', e?.message || 'Failed to save plan');
+    } 
   }
 
 

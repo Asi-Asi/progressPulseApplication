@@ -29,12 +29,14 @@ const errors = [];
                     return;
                 }
 
-                if (!Array.isArray(d.exercises) || d.exercises.length === 0) {
+                const list = Array.isArray(d.items) ? d.items : d.exercises;
+
+                if (!Array.isArray(list) || list.length === 0) {
                     errors.push(`days[${i}].exercises must be a non-empty array`);
                     return;
                 }
 
-                d.exercises.forEach((ex, j) => {
+                list.forEach((ex, j) => {
                     if (!ex || typeof ex !== 'object') {
                         errors.push(`days[${i}].exercises[${j}] must be an object`);
                         return;
