@@ -8,6 +8,10 @@ export const MUSCLE_LABEL_BY_SLUG = {
   abs: 'Abs', back: 'Back', biceps: 'Biceps', chest: 'Chest',
   forearms: 'Forearms', legs: 'Legs', shoulders: 'Shoulders', triceps: 'Triceps',
 };
+export const MUSCLE_LABELS = Object.values(MUSCLE_LABEL_BY_SLUG);
+
+export const TYPES = ['Compound', 'Isolation'];
+export const EQUIPMENT = ['Barbell','Dumbbells','Machine','Cable','Bodyweight','Parallel Bars'];
 
 // בולידציית list: קבל גם slug קטן וגם label קיים
 export function validateListQuery(params = {}) {
@@ -17,11 +21,13 @@ export function validateListQuery(params = {}) {
   if (params.muscle !== undefined) {
     const raw = String(params.muscle).trim();
     const slug = raw.toLowerCase();
-    if (!MUSCLE_SLUGS.includes(slug)) {
-      errors.push(`muscle must be one of: ${MUSCLE_SLUGS.join(', ')}`);
+
+    if (MUSCLE_SLUGS.includes(slug)) {
+      out.muscle = MUSCLE_LABEL_BY_SLUG[slug]
+    } else if (MUSCLE_LABELS.includes(raw)) {
+      out.muscle = raw;                                 // כבר 'Abs'
     } else {
-      // נשמור את הערך כפי שהוא ב־DB (label), שים לב שזה מסתדר גם אם ה־DB שלך הוא TitleCase
-      out.muscle = MUSCLE_LABEL_BY_SLUG[slug]; // "Abs"
+      errors.push(`muscle must be one of: ${[...MUSCLE_SLUGS, ...MUSCLE_LABELS].join(', ')}`);
     }
   }
 
@@ -41,18 +47,33 @@ export function validateListQuery(params = {}) {
   return { valid: errors.length === 0, errors, value: out };
 }
 
+export function normalizeNameRegex(q) {
+  if (typeof q !== 'string' || !q.trim()) return null; // תחזיר null כשאין חיפוש
+  const esc = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return { $regex: esc, $options: 'i' };
+}
+
+export function isValidObjectIdString(s) {
+  return typeof s === 'string' && /^[0-9a-fA-F]{24}$/.test(s.trim());
+}
+
 // create/seed: אם תמשיך להכניס תרגילים - קבל slug והפוך ל-label
 export function validateExerciseDoc(doc = {}) {
   const errors = [];
   if (!doc.name || typeof doc.name !== 'string') errors.push('name is required (string)');
+  if (!doc.muscle) errors.push('muscle is required');
 
-  const rawMuscle = doc.muscle && String(doc.muscle).trim();
-  const slug = rawMuscle?.toLowerCase();
-  if (!slug || !MUSCLE_SLUGS.includes(slug)) {
-    errors.push(`muscle must be one of: ${MUSCLE_SLUGS.join(', ')}`);
+  else {
+    const raw  = String(doc.muscle).trim();
+    const slug = raw.toLowerCase();
+    const normalized = MUSCLE_SLUGS.includes(slug) ? MUSCLE_LABEL_BY_SLUG[slug] : raw;
+    if (!MUSCLE_LABELS.includes(normalized)) {
+      errors.push(`muscle must be one of: ${MUSCLE_LABELS.join(', ')}`);
+    } else {
+      doc.muscle = normalized; // שומר כ-'Abs' כדי להתאים לנתונים הקיימים
+    }
   }
 
-  // השאר כפי שהיה
-  // ...
+  // השאר כמו שהיה (type/equipment וכו')
   return { valid: errors.length === 0, errors };
 }
