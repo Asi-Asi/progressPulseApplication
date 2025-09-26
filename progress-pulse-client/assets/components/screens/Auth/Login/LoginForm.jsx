@@ -12,9 +12,10 @@ const DEV_URL  = Platform.select({
   default: 'http://192.168.137.1:5500',
 });
 
+// החלף ל-true כשאתה רוצה לעבוד מול Render
 const USE_PROD = true;
 
-const BASE_URL = USE_PROD ;
+const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
 
 export default function LoginForm() {
   const router = useRouter();
@@ -36,52 +37,67 @@ export default function LoginForm() {
 };
 
   const handleLogin = async () => {
-    if (!email || !password) {                       // ולידציה בסיסית
-      alertFn('Error', 'Please fill in both fields');
+  if (!email || !password) {
+    alertFn('Error', 'Please fill in both fields');
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    const res = await fetch(`${BASE_URL}/api/users/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password,
+      }),
+    });
+
+    const ct   = res.headers.get('content-type') || '';
+    const data = ct.includes('application/json') ? await res.json() : {};
+
+    if (!res.ok) {
+      // נקה טוקן ישן אם קיים
+      await AsyncStorage.multiRemove(['token','roleLevel','userId']);
+      alertFn('Login Failed', data?.message || `HTTP ${res.status}`);
       return;
     }
 
-    try {
-      setLoading(true);                              // הצג ספינר
+    const accessToken = data.accessToken ?? data.token ?? '';
+    const user        = data.user ?? {};
+    const roleLevel   = Number(user.roleLevel);  // 10 admin, 20 trainee, 30 coach (לפי הזיכרון)
+    const userId      = user.id ?? user._id ?? '';
 
-      const res = await fetch(`${BASE_URL}/api/users/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),         // ניקוי ו-lowercase
-          password,
-        }),
-      });
+    // שמירה ל-AsyncStorage
+    await AsyncStorage.multiSet([
+      ['token',     accessToken],
+      ['roleLevel', String(roleLevel || '')],
+      ['userId',    String(userId || '')],
+    ]);
 
-      const ct   = res.headers.get('content-type') || '';
-      const data = ct.includes('application/json') ? await res.json() : {};
+    // שם לברכה עם fallback חכם
+    const greetName =
+      user.firstName ||
+      (typeof user.name === 'string' && user.name.trim() ? user.name.split(' ')[0] : null) ||
+      'User';
 
-      if (!res.ok) {
-        alertFn('Login Failed', data?.message || `HTTP ${res.status}`);
-        return;
-      }
-
-      // שמירת טוקן/תפקיד
-      await AsyncStorage.multiSet([
-        ['token', data.token ?? ''],
-        ['role',  data.role  ?? ''],
-      ]);
-
-      // ניתוב לפי תפקיד
-      if (data.role === 'admin') {
-        alertFn('Welcome Admin!', 'Redirecting to admin dashboard…');
-        router.replace('/AdminPage');
-      } else {
-        alertFn('Login Successful!', `Welcome, ${data.user?.name || 'User'}!`);
-        router.replace('/MainPage');
-      }
-    } catch (e) {
-      console.error(e);
-      alertFn('Error', 'Something went wrong. Please try again later.');
-    } finally {
-      setLoading(false);                           
+    // ניתוב לפי תפקיד
+    if (roleLevel === 10) {
+      alertFn('Welcome Admin!', 'Redirecting to admin dashboard…');
+      router.replace('/AdminPage');
+    } else {
+      alertFn('Login Successful!', `Welcome, ${greetName}!`);
+      router.replace('/(screens)/plan');
     }
-  };
+  } catch (e) {
+    console.error(e);
+    alertFn('Error', 'Something went wrong. Please try again later.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>

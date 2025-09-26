@@ -116,7 +116,12 @@ export async function login(req, res) {
         message: 'Login successful',
         accessToken,
         refreshToken,
-        user: { id: 'admin', email: adminEmail, roleLevel: Roles.ADMIN, name: 'Administrator' }
+        user: { 
+          id: 'admin',
+          email: adminEmail,
+          roleLevel: Roles.ADMIN,
+          name: 'Administrator'
+        }
       });
     }
 
@@ -130,6 +135,7 @@ export async function login(req, res) {
 
     const userMini = {
       _id: user._id,
+      firstName: user.firstName,
       roleLevel: user.roleLevel ?? Roles.TRAINEE,  // safety default
       email: user.email,
     };
@@ -152,7 +158,13 @@ export async function login(req, res) {
       message: 'Login successful',
       accessToken,
       refreshToken,
-      user: { id: String(user._id), email: user.email, roleLevel: user.roleLevel }
+      user: {
+        id: String(user._id),
+        email: user.email,
+        roleLevel: user.roleLevel,
+        firstName: user.firstName ||'',
+        lastName: user.lastName || ''
+      }
     });
 
   } catch (error) {
