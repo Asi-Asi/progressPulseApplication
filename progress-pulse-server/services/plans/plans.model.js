@@ -1,75 +1,83 @@
 // services/plans/plans.model.js
 import { ObjectId } from 'mongodb';
 
-// Helper: validate a 24-hex string (ObjectId)
-function isValidObjectIdString(s) {
+/** Public helper (exported in case you need it elsewhere) */
+export function isValidObjectIdString(s) {
   return typeof s === 'string' && /^[0-9a-fA-F]{24}$/.test(s);
 }
 
 /**
- * Minimal validation for a Plan payload:
- * - days: array length 1..7
- * - each day has a non-empty exercises array
- * - each exercise has exerciseId (24-hex string) and sets (integer 1..20)
- * - no names, no weights, no reps
+ * Validate a Plan payload:
+ * - payload.days is an array with length 1..7
+ * - each day is an object
+ * - each day has a non-empty array under either `items` or `exercises`
+ * - each element has { exerciseId: 24-hex, sets: int 1..20 }
  */
-export function validatePlanPayload(payload) {
-const errors = [];
+export function validatePlanPayload(payload = {}) {
+    const errors = [];
 
     if (!Array.isArray(payload.days)) {
         errors.push('days must be an array');
     } else {
-            if (payload.days.length < 1 || payload.days.length > 7) {
-                errors.push('days length must be between 1 and 7');
+        const len = payload.days.length;
+        if (len < 1 || len > 7) {
+        errors.push('days length must be between 1 and 7');
+        }
+
+    payload.days.forEach((d, i) => {
+        if (!d || typeof d !== 'object') {
+            errors.push(`days[${i}] must be an object`);
+            return;
+        }
+
+        const list = Array.isArray(d.items) ? d.items : d.exercises;
+        if (!Array.isArray(list) || list.length === 0) {
+            errors.push(`days[${i}].items (or exercises) must be a non-empty array`);
+            return;
+        }
+
+        list.forEach((ex, j) => {
+            if (!ex || typeof ex !== 'object') {
+            errors.push(`days[${i}].items[${j}] must be an object`);
+            return;
             }
 
-            payload.days.forEach((d, i) => {
-                if (!d || typeof d !== 'object') {
-                    errors.push(`days[${i}] must be an object`);
-                    return;
-                }
+            const exId = String(ex.exerciseId ?? '');
+            if (!isValidObjectIdString(exId)) {
+            errors.push(`days[${i}].items[${j}].exerciseId must be a 24-hex ObjectId string`);
+            }
 
-                const list = Array.isArray(d.items) ? d.items : d.exercises;
+            const setsNum = Number(ex.sets);
+            if (!Number.isInteger(setsNum) || setsNum < 1 || setsNum > 20) {
+            errors.push(`days[${i}].items[${j}].sets must be an integer between 1 and 20`);
+            }
+        });
+        });
+    }
 
-                if (!Array.isArray(list) || list.length === 0) {
-                    errors.push(`days[${i}].exercises must be a non-empty array`);
-                    return;
-                }
-
-                list.forEach((ex, j) => {
-                    if (!ex || typeof ex !== 'object') {
-                        errors.push(`days[${i}].exercises[${j}] must be an object`);
-                        return;
-                    }
-                    if (!isValidObjectIdString(ex.exerciseId)) {
-                        errors.push(`days[${i}].exercises[${j}].exerciseId must be a 24-hex ObjectId string`);
-                    }
-                    if (typeof ex.sets !== 'number' || !Number.isInteger(ex.sets) || ex.sets < 1 || ex.sets > 20) {
-                        errors.push(`days[${i}].exercises[${j}].sets must be an integer between 1 and 20`);
-                    }
-                });
-            });
-        }
     return { valid: errors.length === 0, errors };
 }
 
 /**
- * Normalize payload into a DB document:
+ * Normalize payload for storage:
  * - userId -> ObjectId
- * - convert exerciseId strings to ObjectId
- * - days are ordered, dayNumber = index+1
- * - keep only { exerciseId, sets }, and optional locked boolean
+ * - accept `items` or `exercises`, always store as `exercises`
+ * - dayNumber preserved if provided, otherwise index+1
+ * - coerce sets into [1..20] ints
  */
-export function normalizePlanForStore(payload, userId) {
+export function normalizePlanForStore(payload = {}, userId) {
     return {
-        userId: new ObjectId(userId),
-        days: (payload.days || []).map((d, idx) => ({
-            dayNumber: idx + 1,
-            exercises: (d.exercises || []).map(ex => ({
-                exerciseId: new ObjectId(String(ex.exerciseId)),
-                sets: Math.max(1, Math.min(20, parseInt(ex.sets ?? 1, 10))),
+        userId: new ObjectId(String(userId)),
+        days: (payload.days || []).map((d, idx) => {
+        const src = Array.isArray(d.items) ? d.items : (d.exercises || []);
+        return {
+            dayNumber: Number(d.dayNumber ?? idx + 1),
+            exercises: src.map((ex) => ({
+            exerciseId: new ObjectId(String(ex.exerciseId)),
+            sets: Math.max(1, Math.min(20, parseInt(ex.sets ?? 1, 10))),
             })),
-        })),
+        };
+        }),
         locked: Boolean(payload.locked) || false,
     };
 }
