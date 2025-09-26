@@ -25,7 +25,7 @@ const ROLE_NUMBER = 20;
 
 export default function BuildWorkoutPlanScreen() {
   const router = useRouter();
-  const { days, selectedDayId, planLocked, actions } = usePlanDraft();
+  const { days, selectedDayId, planLocked, dirty, actions } = usePlanDraft();
 
   const [accessToken, setAccessToken] = useState('');
   const [roleLevel, setRoleLevel] = useState(20);
@@ -40,6 +40,8 @@ export default function BuildWorkoutPlanScreen() {
 
   useEffect(() => {
   if (!accessToken) return;
+  if (dirty) return;
+  if (days && days.length > 0) return;
   (async () => {
     try {
       const res = await getMyPlan({ token: accessToken }); // מצופה: { days: [...] }
@@ -80,6 +82,7 @@ export default function BuildWorkoutPlanScreen() {
       const payload = actions.toServerPayload();
       console.log('PUT /api/plans/me payload =', JSON.stringify(payload, null, 2));
       await saveMyPlan({ token: accessToken, days: payload.days });
+      actions.markClean();
       Alert.alert('Saved', 'Your plan was saved successfully');
     } catch (e) {
       console.log('saveMyPlan ERROR:', {
@@ -238,13 +241,19 @@ export default function BuildWorkoutPlanScreen() {
       </ScrollView>
 
       {/* Modal: how many days? */}
-      <Modal visible={askDaysVisible} transparent animationType="fade">
+            <Modal
+              visible={askDaysVisible}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setAskDaysVisible(false)} // Android back
+            >
         <View className="flex-1 items-center justify-center px-6 bg-black/60">
           <View className="w-full rounded-2xl p-5 bg-card">
             <Text className="text-text text-center font-bold mb-4 text-lg">
               How many days do you train per week?
             </Text>
 
+            {/* Quick-pick chips */}
             <View className="flex-row flex-wrap items-center justify-center gap-2 mb-4">
               {[1, 2, 3, 4, 5, 6, 7].map((n) => {
                 const picked = daysCountDraft === String(n);
@@ -260,6 +269,7 @@ export default function BuildWorkoutPlanScreen() {
               })}
             </View>
 
+            {/* Manual input (optional) */}
             <TextInput
               value={daysCountDraft}
               onChangeText={setDaysCountDraft}
@@ -267,26 +277,37 @@ export default function BuildWorkoutPlanScreen() {
               keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}
               className="rounded-xl px-4 py-3 mb-4 bg-bg text-text border border-border"
               placeholderTextColor="#888888"
+              maxLength={1}
             />
 
-            <View className="flex-row gap-3">
-              <TouchableOpacity
-                className="flex-1 items-center rounded-xl px-4 py-3 bg-primary"
-                onPress={() => {
-                  actions.upsertDayCount(daysCountDraft);
-                  setAskDaysVisible(false);
-                }}
-              >
-                <Text className="text-onPrimary font-bold">Start</Text>
-              </TouchableOpacity>
+            {(() => {
+              const n = parseInt(daysCountDraft, 10);
+              const valid = Number.isInteger(n) && n >= 1 && n <= 7;
+              return (
+                <View className="flex-row gap-3">
+                  <TouchableOpacity
+                    disabled={!valid}
+                    className={`flex-1 items-center rounded-xl px-4 py-3 ${valid ? 'bg-primary' : 'bg-card opacity-50'}`}
+                    onPress={() => {
+                      // Only apply when valid
+                      actions.upsertDayCount(n);   // important: pass a number, not a string
+                      // optional: mark dirty so hydrate won't overwrite local changes
+                      actions.markDirty?.();
+                      setAskDaysVisible(false);
+                    }}
+                  >
+                    <Text className={`${valid ? 'text-onPrimary' : 'text-text'} font-bold`}>Start</Text>
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                className="flex-1 items-center rounded-xl px-4 py-3 bg-bg border border-border"
-                onPress={() => setAskDaysVisible(false)}
-              >
-                <Text className="text-text font-bold">Cancel</Text>
-              </TouchableOpacity>
-            </View>
+                  <TouchableOpacity
+                    className="flex-1 items-center rounded-xl px-4 py-3 bg-bg border border-border"
+                    onPress={() => setAskDaysVisible(false)}
+                  >
+                    <Text className="text-text font-bold">Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })()}
           </View>
         </View>
       </Modal>

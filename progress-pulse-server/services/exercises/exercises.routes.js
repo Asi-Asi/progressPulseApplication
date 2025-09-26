@@ -9,6 +9,8 @@ exercisesRouter.use(requireAuth);
 
 // GET /api/exercises?muscle=back&query=lat&limit=50&skip=0
 exercisesRouter
+
+
 .get('/', listExercises)
 
 // GET /api/exercises/:id  (single exercise)

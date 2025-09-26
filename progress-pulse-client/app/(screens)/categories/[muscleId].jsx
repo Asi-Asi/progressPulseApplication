@@ -1,66 +1,92 @@
 // app/(screens)/categories/[muscleId].jsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { MUSCLES } from '../../../assets/data/muscles';          // קטגוריות נשאר סטטי
-import { listExercises } from '../../../assets/api/plan.api';     // API ל־DB
+import { MUSCLES } from '../../../assets/data/muscles';
+import { listExercises } from '../../../assets/api/plan.api';
 import { planDraft } from '../../../assets/lib/planDraft';
 
 export default function ExercisesByMusclePicker() {
   const router = useRouter();
   const { muscleId, targetDayId } = useLocalSearchParams();
-
   const muscle = MUSCLES.find((m) => m.id === muscleId);
-  const [accessToken, setAccessToken] = useState('');
-  const [query, setQuery] = useState('');
 
-  // נתונים שמגיעים מהשרת
+  // auth
+  const [token, setToken] = useState('');
+
+  // search (debounced)
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  // data
   const [items, setItems] = useState([]);
   const [skip, setSkip] = useState(0);
   const [total, setTotal] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
 
-  // מצבי טעינה
+  // loading
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // שלוף טוקן
+  // prevent overlapping pagination calls
+  const pagingInFlightRef = useRef(false);
+
+  // load token once
   useEffect(() => {
-    AsyncStorage.getItem('token').then((t) => setAccessToken(t || ''));
+    (async () => {
+      const t = await AsyncStorage.getItem('token');
+      setToken(t || '');
+    })();
   }, []);
 
-  // בכל שינוי של שריר/חיפוש — אפס פאג'ינציה ושלוף מחדש
-  useEffect(() => {
-    if (!accessToken || !muscleId) return;
-    setSkip(0);
-    setItems([]);
-    setTotal(null);
-    fetchPage(0, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken, muscleId, query]);
-
+  // core fetch (used by both first page and pagination)
   const fetchPage = useCallback(
-    async (nextSkip, replace = false) => {
+    async ({ nextSkip, replace }) => {
+      if (!token || !muscleId) return;
+
       try {
         if (replace) setLoading(true);
-        else setLoadingMore(true);
+        else {
+          if (pagingInFlightRef.current) return;
+          pagingInFlightRef.current = true;
+          setLoadingMore(true);
+        }
 
         const res = await listExercises({
-          token: accessToken,
-          muscle: muscleId,                // slug קטן (abs/back/…); השרת מנרמל
-          query: query.trim() || undefined,
+          token,
+          muscle: muscleId,                     // slug; server normalizes to label
+          query: debouncedQuery || undefined,
           limit: 30,
           skip: nextSkip,
         });
 
-        // תמיכה בשני פורמטים: מערך ישיר או {items,total}
         const list = Array.isArray(res) ? res : res?.items || [];
         const tot = Array.isArray(res) ? null : res?.total ?? null;
 
         setItems((prev) => {
           const merged = replace ? list : [...prev, ...list];
+          // unique by id
           const seen = new Set();
           return merged.filter((it) => {
             const k = String(it._id || it.id);
@@ -69,22 +95,46 @@ export default function ExercisesByMusclePicker() {
             return true;
           });
         });
-        setTotal(tot);
+
         setSkip(nextSkip + list.length);
+        setTotal(tot);
+
+        if (tot != null) {
+          setHasMore(nextSkip + list.length < tot);
+        } else {
+          setHasMore(list.length === 30); // if API doesn't send total
+        }
       } catch (e) {
-        console.warn('listExercises error:', e?.message || e);
+        console.warn('listExercises error:', e?.status || '', e?.message || e);
+        if (e?.status === 401) {
+          Alert.alert('Session expired', 'Please log in again.');
+        } else if (e?.message) {
+          Alert.alert('Error', e.message);
+        }
       } finally {
         setLoading(false);
         setLoadingMore(false);
+        pagingInFlightRef.current = false;
       }
     },
-    [accessToken, muscleId, query]
+    [token, muscleId, debouncedQuery]
   );
+
+  // first page whenever token / muscle / search changes
+  useEffect(() => {
+    if (!token || !muscleId) return;
+    setItems([]);
+    setSkip(0);
+    setTotal(null);
+    setHasMore(true);
+    // IMPORTANT: never block the initial load with in-flight flags
+    fetchPage({ nextSkip: 0, replace: true });
+  }, [token, muscleId, debouncedQuery, fetchPage]);
 
   const handleEndReached = () => {
     if (loading || loadingMore) return;
-    if (total != null && items.length >= total) return; // אין עוד נתונים
-    fetchPage(skip, false);
+    if (!hasMore) return;
+    fetchPage({ nextSkip: skip, replace: false });
   };
 
   const data = useMemo(() => items, [items]);
@@ -126,7 +176,6 @@ export default function ExercisesByMusclePicker() {
         </View>
       </View>
 
-      {/* מצב טעינה ראשון */}
       {loading && items.length === 0 ? (
         <View className="items-center justify-center py-16">
           <ActivityIndicator />
@@ -156,12 +205,12 @@ export default function ExercisesByMusclePicker() {
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() => {
-                const id = item._id || item.id; // מזהה אמיתי מה־DB
+                const id = item._id || item.id;
                 planDraft.addExercise(targetDayId, {
                   id,
                   name: item.name,
-                  muscle: muscle?.name, // לתצוגה
-                  muscleId,             // לשימוש UI
+                  muscle: muscle?.name,
+                  muscleId,
                   sets: 1,
                 });
                 router.push('/(screens)/plan');

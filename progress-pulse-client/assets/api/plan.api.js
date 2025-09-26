@@ -14,18 +14,32 @@ async function request(path, { method = 'GET', token, body } = {}) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const ct = res.headers.get('content-type') || '';
-  const data = ct.includes('application/json') ? await res.json() : null;
+  // Read the raw text first so empty bodies won't crash JSON.parse
+  const raw = await res.text();
+  let data = null;
+  if (raw && raw.length) {
+    try {
+      data = JSON.parse(raw);
+    } catch (e) {
+      // Not valid JSON – keep the raw text (optional)
+      data = raw;
+    }
+  }
 
   if (!res.ok) {
-    const err = new Error(data?.message || `HTTP ${res.status}`);
+    const err = new Error(
+      (data && data.message) || `HTTP ${res.status}`
+    );
     err.status = res.status;
-    err.payload = data;
+    err.payload = typeof data === 'string' ? { raw: data } : data;
     err.url = url;
     throw err;
   }
-  return data;
+
+  return data; // may be null for 204/empty-body responses
 }
+
+export { request };
 
 /** ---------- PLAN ---------- */
 

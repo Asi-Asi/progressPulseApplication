@@ -14,17 +14,25 @@ const server = express();
 
 //לאפשר גישה לשרת מכתובת אחרת
 server.use(cors()); 
+server.set('trust proxy', 1)
 
-//מגביל מספר בקשות בפרק זמן מסוים
-server.use(helmet());
-//rate limiting is 300 requests per 15 minutes
-server.use(rateLimit({ windowMs: 15*60*1000, max: 300 }));
 
 
 
 //לאפשר קליטת נתונים מגוף הבקשה
 server.use(express.json({ extended: true, limit: '50mb' }));
 
+
+
+//מגביל מספר בקשות בפרק זמן מסוים
+server.use(helmet());
+//rate limiting is 300 requests per 15 minutes
+server.use(rateLimit({
+    windowMs: 60 * 1000,      // 1 minute
+    limit: 100,               // tune this for your app
+    standardHeaders: true,    // send RateLimit-* headers
+    legacyHeaders: false,     // disable X-RateLimit-* headers
+}));
 
 //routes
 server.use('/api', router);

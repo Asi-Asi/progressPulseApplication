@@ -6,6 +6,7 @@ const store = {
   days: [],                 // [{ id, name, locked:false, exercises:[{ id, name?, muscle?, sets:number }] }]
   selectedDayId: null,
   planLocked: false,
+  dirty: false,
   listeners: new Set(),
 };
 
@@ -17,19 +18,29 @@ function emit() {
     })),
     selectedDayId: store.selectedDayId,
     planLocked: store.planLocked,
+    dirty: store.dirty,
   };
   for (const cb of store.listeners) cb(snapshot);
 }
 
 export const planDraft = {
   getState() {
-    return { days: store.days, selectedDayId: store.selectedDayId, planLocked: store.planLocked };
+    return {
+      days: store.days,
+      selectedDayId: store.selectedDayId,
+      planLocked: store.planLocked,
+      dirty: store.dirty,
+    };
   },
 
   subscribe(cb) {
     store.listeners.add(cb);
     return () => store.listeners.delete(cb);
   },
+
+  markDirty() { store.dirty = true; emit(); },
+  markClean() { store.dirty = false; emit(); },
+  hasLocalChanges() { return !!store.dirty; },
 
   // ---- core helpers ----
   replaceAllDays(mappedDays) {               // replace entire plan from mapped array
@@ -50,20 +61,39 @@ export const planDraft = {
     emit();
   },
 
-  hydrateFromServer(serverDays) {            // map server -> local
-    const mapped = (serverDays || []).map(d => ({
-      id: Number(d.dayNumber),               // dayNumber -> id
+  hydrateFromServer(serverDays) {
+  const mapped = (serverDays || []).map((d) => {
+    // accept either d.exercises (correct) or legacy d.items
+    const src = Array.isArray(d.exercises) ? d.exercises : (d.items || []);
+    return {
+      id: Number(d.dayNumber),
       name: `Day ${d.dayNumber}`,
       locked: false,
-      exercises: (d.items || []).map(it => ({
-        id: it.exerciseId,                   // only id known now
-        name: `#${it.exerciseId}`,           // placeholder until we enrich from /exercises
+      exercises: src.map((it) => ({
+        id: it.exerciseId,
+        name: `#${it.exerciseId}`,
         muscle: '',
         sets: Number(it.sets ?? 1),
       })),
-    }));
-    this.replaceAllDays(mapped);
-  },
+    };
+  });
+  this.replaceAllDays(mapped);
+},
+
+// --- map local -> server
+toServerPayload() {
+  const days = store.days
+    .map((d, idx) => ({
+      dayNumber: d.id ?? (idx + 1),
+      // send as exercises (not items)
+      exercises: (d.exercises || []).map((ex) => ({
+        exerciseId: ex.id,
+        sets: Number(ex.sets ?? 1),
+      })),
+    }))
+    .filter((d) => d.exercises.length > 0);
+  return { days };
+},
 
   toServerPayload() {                        // map local -> server
     const days = store.days
@@ -82,6 +112,7 @@ export const planDraft = {
     store.days = [];
     store.selectedDayId = null;
     store.planLocked = false;
+    store.dirty = false;
     emit();
   },
 
@@ -96,6 +127,7 @@ export const planDraft = {
     }));
     store.selectedDayId = store.days[0]?.id ?? null;
     store.planLocked = false; // new plan is editable
+    store.dirty = true;
     emit();
   },
 
@@ -113,6 +145,7 @@ export const planDraft = {
     if (!store.days.some(d => d.id === store.selectedDayId)) {
       store.selectedDayId = store.days[0]?.id ?? null;
     }
+    store.dirty = true;
     emit();
   },
 
@@ -126,12 +159,14 @@ export const planDraft = {
     const day = store.days.find(d => d.id === Number(dayId));
     if (!day) return;
     day.locked = true;
+    store.dirty = true; 
     emit();
   },
   unlockDay(dayId) {
     const day = store.days.find(d => d.id === Number(dayId));
     if (!day) return;
     day.locked = false;
+    store.dirty = true; 
     emit();
   },
   lockPlan() {
@@ -159,6 +194,7 @@ export const planDraft = {
       muscle: exercise.muscle ?? '',
       sets: Number(exercise.sets ?? initialSets),
     });
+    store.dirty = true; 
     emit();
   },
 
@@ -168,6 +204,7 @@ export const planDraft = {
     if (!day || day.locked || !day.exercises[index]) return;
     const next = Math.max(1, Math.min(20, Number(value) || 1));
     day.exercises[index].sets = next;
+    store.dirty = true; 
     emit();
   },
 
@@ -178,6 +215,7 @@ export const planDraft = {
     const cur = Number(day.exercises[index].sets) || 0;
     const next = Math.max(1, Math.min(20, cur + delta));
     day.exercises[index].sets = next;
+    store.dirty = true; 
     emit();
   },
 
@@ -186,6 +224,7 @@ export const planDraft = {
     const day = store.days.find(d => d.id === Number(dayId));
     if (!day || day.locked) return;
     day.exercises.splice(index, 1);
+    store.dirty = true; 
     emit();
   },
 };
@@ -197,13 +236,14 @@ export function usePlanDraft() {
     days: state.days,
     selectedDayId: state.selectedDayId,
     planLocked: state.planLocked,
+    dirty: state.dirty,
     actions: {
       createDays: planDraft.createDays,
-      upsertDayCount: planDraft.upsertDayCount,     // ← חדש
-      replaceAllDays: planDraft.replaceAllDays,     // ← חדש
-      hydrateFromServer: planDraft.hydrateFromServer, // ← חדש
-      toServerPayload: planDraft.toServerPayload,   // ← חדש
-      reset: planDraft.reset,                       // ← אופציונלי
+      upsertDayCount: planDraft.upsertDayCount,     
+      replaceAllDays: planDraft.replaceAllDays,     
+      hydrateFromServer: planDraft.hydrateFromServer, 
+      toServerPayload: planDraft.toServerPayload,   
+      reset: planDraft.reset,                       
       setSelectedDayId: planDraft.setSelectedDayId,
       addExercise: planDraft.addExercise,
       setSets: planDraft.setSets,
@@ -213,6 +253,9 @@ export function usePlanDraft() {
       unlockDay: planDraft.unlockDay,
       lockPlan: planDraft.lockPlan,
       unlockPlan: planDraft.unlockPlan,
+      markDirty: planDraft.markDirty,           
+      markClean: planDraft.markClean,           
+      hasLocalChanges: planDraft.hasLocalChanges, 
     },
   };
 }
