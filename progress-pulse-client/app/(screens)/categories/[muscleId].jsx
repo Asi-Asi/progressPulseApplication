@@ -1,3 +1,4 @@
+// app/(screens)/categories/[musclesId].jsx
 import React, { useMemo, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -78,15 +79,17 @@ export default function ExercisesByMusclePicker() {
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => {
-              planDraft.addExercise(targetDayId, {
-                ...item,
-                muscle: muscle?.name,
-                muscleId,
-                sets: 1,
-              });
-              router.push('/plan');
-            }}
+              onPress={() => {
+                const id = item._id || item.id; // מזהה מהשרת (ObjectId)
+                planDraft.addExercise(targetDayId, {
+                  id,
+                  name: item.name,
+                  muscle: muscle?.name, // לתצוגה
+                  muscleId,             // 'abs'/'back'... לשימוש UI בלבד
+                  sets: 1,
+                });
+                router.push('/plan');
+              }}
             className="rounded-2xl px-4 py-3 bg-card"
             activeOpacity={0.9}
           >

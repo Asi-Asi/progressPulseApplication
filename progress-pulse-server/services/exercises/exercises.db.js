@@ -75,8 +75,9 @@ export async function isExerciseInUse(exId) {
   try {
     client = await MongoClient.connect(CN_STR);
     const db = client.db(DB_NAME);
-    const count = await db.collection(COLLECTION).countDocuments({
-      'days.exercises.exerciseId': new ObjectId(exId),
+    // בדוק בקולקשן התוכניות (תעדכן לשם האמיתי שלך)
+    const count = await db.collection('Plans').countDocuments({
+      'days.items.exerciseId': new ObjectId(exId), // או הנתיב שאתה משתמש בו בפועל
     }, { limit: 1 });
     return count > 0;
   } finally {

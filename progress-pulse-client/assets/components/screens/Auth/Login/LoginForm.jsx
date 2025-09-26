@@ -3,19 +3,8 @@ import { useState } from 'react';
 import { TextInput, TouchableOpacity, Text, Alert, Platform, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { API_URL } from '../../../../api/client';
 
-const PROD_URL = 'https://progresspulseapplication.onrender.com';
-const DEV_URL  = Platform.select({
-  web:     'http://localhost:5500',
-  ios:     'http://localhost:5500',
-  android: 'http://10.0.2.2:5500',
-  default: 'http://192.168.137.1:5500',
-});
-
-// החלף ל-true כשאתה רוצה לעבוד מול Render
-const USE_PROD = true;
-
-const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
 
 export default function LoginForm() {
   const router = useRouter();
@@ -45,7 +34,7 @@ export default function LoginForm() {
   try {
     setLoading(true);
 
-    const res = await fetch(`${BASE_URL}/api/users/login`, {
+    const res = await fetch(`${API_URL}/api/users/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',

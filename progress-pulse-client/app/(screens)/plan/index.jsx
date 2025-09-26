@@ -1,5 +1,5 @@
 // app/.../BuildWorkoutPlanScreen.jsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,16 @@ import {
   Pressable,
   ScrollView,
   Platform,
+  Alert
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter} from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { usePlanDraft } from '../../../assets/lib/planDraft';
 import AppLogo from "../../../assets/components/ui/AppLogo";
 import BottomTabs from "../../../assets/components/navigation/BottomTabs"; // <-- tabs
+import { getMyPlan, saveMyPlan } from '../../../assets/api/plan.api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 // role numbers: 10 admin, 20 trainee, 30 coach
 const ROLE_NUMBER = 20; // TODO: replace with your real user.role
@@ -23,6 +27,32 @@ const ROLE_NUMBER = 20; // TODO: replace with your real user.role
 export default function BuildWorkoutPlanScreen() {
   const router = useRouter();
   const { days, selectedDayId, planLocked, actions } = usePlanDraft();
+
+  const [accessToken, setAccessToken] = useState('');
+  const [roleLevel, setRoleLevel] = useState(20);
+
+  useEffect(() => {
+    (async () => {
+      const [t, r] = await AsyncStorage.multiGet(['token','roleLevel']);
+      setAccessToken(t?.[1] || '');
+      setRoleLevel(Number(r?.[1] || 20));
+    })();
+  }, []);
+
+  useEffect(() => {
+  if (!accessToken) return;
+  (async () => {
+    try {
+      const res = await getMyPlan({ token: accessToken }); // מצופה: { days: [...] }
+      if (Array.isArray(res?.days)) {
+        actions.hydrateFromServer(res.days); // ימפה ל-{id,name,exercises,locked:false}
+      }
+    } catch (e) {
+      // 404 = אין תוכנית קיימת — מתעלמים. כל שגיאה אחרת מדפיסים.
+      if (e.status !== 404) console.warn('getMyPlan error:', e.message || e);
+    }
+  })();
+}, [accessToken]);
 
   const [askDaysVisible, setAskDaysVisible] = useState(false);
   const [daysCountDraft, setDaysCountDraft] = useState('');
@@ -45,6 +75,24 @@ export default function BuildWorkoutPlanScreen() {
     if (!selectedDayId) return;
     actions.removeExercise(selectedDayId, index);
   };
+
+  async function handleSavePlan() {
+    try {
+    const payload = actions.toServerPayload();
+    console.log('PUT /api/plans/me payload =', JSON.stringify(payload, null, 2));
+    await saveMyPlan({ token: accessToken, days: payload.days });
+    Alert.alert('Saved', 'Your plan was saved successfully');
+  } catch (e) {
+    console.log('saveMyPlan ERROR:', {
+      message: e?.message,
+      status: e?.status,
+      url: e?.url,
+      payload: e?.payload, // ⇐ זה ה־JSON המלא שהשרת החזיר (כולל פירוט הוולידציה)
+    });
+    Alert.alert('Error', e?.message || 'Failed to save plan');
+  } 
+  }
+
 
   return (
     <View className="flex-1 bg-bg">
@@ -76,11 +124,15 @@ export default function BuildWorkoutPlanScreen() {
             <View className="flex-row items-center gap-2">
               {!planLocked && canFinishPlan ? (
                 <TouchableOpacity
-                  onPress={actions.lockPlan}
+                  onPress={async () => {
+                    await handleSavePlan();   // ← קודם שומר לשרת
+                    actions.lockPlan();       // ← ואז נועל מקומית (UI)
+                  }}
                   className="rounded-xl px-3 py-2 bg-primary"
                 >
                   <Text className="text-onPrimary font-bold">Finish Plan</Text>
                 </TouchableOpacity>
+
               ) : planLocked ? (
                 <TouchableOpacity
                   onPress={actions.unlockPlan}
@@ -222,7 +274,7 @@ export default function BuildWorkoutPlanScreen() {
               <TouchableOpacity
                 className="flex-1 items-center rounded-xl px-4 py-3 bg-primary"
                 onPress={() => {
-                  createDays(daysCountDraft);
+                  actions.upsertDayCount(daysCountDraft);
                   setAskDaysVisible(false);
                 }}
               >
@@ -241,7 +293,7 @@ export default function BuildWorkoutPlanScreen() {
       </Modal>
 
       {/* Bottom tabs (role-aware) */}
-      <BottomTabs role={ROLE_NUMBER} currentHref="/(screens)/plan" />
+      <BottomTabs role={roleLevel} currentHref="/(screens)/plan" />
     </View>
   );
 }
