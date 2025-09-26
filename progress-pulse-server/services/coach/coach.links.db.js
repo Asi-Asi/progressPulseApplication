@@ -176,12 +176,38 @@ export async function approveLink(linkId, coachId) {
         client = await MongoClient.connect(process.env.CONNECTION_STRING);
         const db = client.db(process.env.DB_NAME);
         const now = new Date();
+
+        const filter = {
+        _id: oid(linkId),
+        status: LinkStatus.PENDING,
+        $or: [
+            { coachId: String(coachId) },
+            ...(ObjectId.isValid(String(coachId)) ? [{ coachId: oid(coachId) }] : [])
+        ]
+        };
+
         const res = await db.collection(COLL).findOneAndUpdate(
-        { _id: oid(linkId), coachId: String(coachId), status: LinkStatus.PENDING },
+        filter,
         { $set: { status: LinkStatus.APPROVED, updatedAt: now } },
         { returnDocument: 'after' }
         );
-        return res.value; // null if not found / not pending / wrong coach
+
+        
+        if (!res.value) {
+            const already = await db.collection(COLL).findOne({
+                _id: oid(linkId),
+                $or: [
+                    { coachId: String(coachId) },
+                    ...(ObjectId.isValid(String(coachId)) ? [{ coachId: oid(coachId) }] : [])
+                ]
+            });
+            if (already && already.status === LinkStatus.APPROVED) {
+                return { _conflict: 'already-approved', doc: already };
+            }
+            return null;
+        }
+        return res.value; // null אם לא נמצא/לא pending/לא שייך למאמן
+        
     } finally {
         if (client) await client.close();
     }
@@ -192,13 +218,37 @@ export async function rejectLink(linkId, coachId) {
     try {
         client = await MongoClient.connect(process.env.CONNECTION_STRING);
         const db = client.db(process.env.DB_NAME);
-        const now = new Date();
+
+        const filter = {
+        _id: oid(linkId),
+        status: LinkStatus.PENDING,
+        $or: [
+            { coachId: String(coachId) },
+            ...(ObjectId.isValid(String(coachId)) ? [{ coachId: oid(coachId) }] : [])
+        ],
+        };
+
         const res = await db.collection(COLL).findOneAndUpdate(
-        { _id: oid(linkId), coachId: String(coachId), status: LinkStatus.PENDING },
-        { $set: { status: LinkStatus.REJECTED, updatedAt: now } },
+        filter,
+        { $set: { status: LinkStatus.REJECTED, updatedAt: new Date() } },
         { returnDocument: 'after' }
         );
-        return res.value;
+
+        if (res.value) return res.value;
+
+        // אם לא נמצא — נבדוק האם כבר נדחה (קונפליקט במקום 404 שגוי)
+        const already = await db.collection(COLL).findOne({
+        _id: oid(linkId),
+        $or: [
+            { coachId: String(coachId) },
+            ...(ObjectId.isValid(String(coachId)) ? [{ coachId: oid(coachId) }] : [])
+        ],
+        });
+        if (already && already.status === LinkStatus.REJECTED) {
+        return { _conflict: 'already-rejected', doc: already };
+        }
+
+        return null; // לא נמצא / לא pending / לא שייך למאמן
     } finally {
         if (client) await client.close();
     }
@@ -209,18 +259,41 @@ export async function revokeLink(linkId, coachId) {
     try {
         client = await MongoClient.connect(process.env.CONNECTION_STRING);
         const db = client.db(process.env.DB_NAME);
-        const now = new Date();
+
+        const filter = {
+        _id: oid(linkId),
+        status: LinkStatus.APPROVED,
+        $or: [
+            { coachId: String(coachId) },
+            ...(ObjectId.isValid(String(coachId)) ? [{ coachId: oid(coachId) }] : [])
+        ],
+        };
+
         const res = await db.collection(COLL).findOneAndUpdate(
-        { _id: oid(linkId), coachId: String(coachId), status: LinkStatus.APPROVED },
-        { $set: { status: LinkStatus.REVOKED, updatedAt: now } },
+        filter,
+        { $set: { status: LinkStatus.REVOKED, updatedAt: new Date() } },
         { returnDocument: 'after' }
         );
-        return res.value;
+
+        if (res.value) return res.value;
+
+        // אם לא נמצא במסנן הראשי — בדוק אם כבר מבוטל ונחזיר קונפליקט
+        const already = await db.collection(COLL).findOne({
+        _id: oid(linkId),
+        $or: [
+            { coachId: String(coachId) },
+            ...(ObjectId.isValid(String(coachId)) ? [{ coachId: oid(coachId) }] : [])
+        ],
+        });
+        if (already && already.status === LinkStatus.REVOKED) {
+        return { _conflict: 'already-revoked', doc: already };
+        }
+
+        return null; // לא נמצא / לא approved / לא שייך למאמן
     } finally {
         if (client) await client.close();
     }
 }
-
 export async function revokeAllApprovedForTrainee(traineeId) {
     let client = null;
     try {

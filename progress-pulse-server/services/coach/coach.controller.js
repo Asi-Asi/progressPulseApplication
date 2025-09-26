@@ -177,24 +177,37 @@ export async function listJoinRequests(req, res) {
 export async function approveJoinRequest(req, res) {
     try {
         const { linkId } = req.params;
-        if (!ObjectId.isValid(linkId)) return res.status(400).json({ message: 'Invalid linkId' });
+        if (!ObjectId.isValid(linkId)) {
+        return res.status(400).json({ message: 'Invalid linkId' });
+        }
 
-        // Transition pending -> approved (only if link belongs to this coach)
-        const approved = await approveLink(linkId, req.user._id);
-        if (!approved) return res.status(404).json({ message: 'Request not found or not pending' });
+        // נסה לאשר
+        const out = await approveLink(linkId, req.user._id);
 
-        // Enforce "one active coach per trainee"
-        await revokeAllApprovedForTrainee(approved.traineeId);
+        // לא נמצא/לא pending/לא שייך למאמן
+        if (!out) {
+        return res.status(404).json({ message: 'Request not found or not pending' });
+        }
 
-        // Note: revokeAllApprovedForTrainee revokes APPROVED links; our current link was just approved.
-        // If your implementation revokes *all* including current — re-approve again here.
+        // כבר מאושר → החזר קונפליקט ברור
+        if (out._conflict === 'already-approved') {
+        return res.status(409).json({ message: 'Request already approved', link: out.doc });
+        }
 
-        return res.json({ message: 'Request approved', link: approved });
+        // בשלב הזה out = המסמך שאושר עכשיו
+        const approved = out;
+
+        // לאכוף "מאמן אחד פעיל למתאמן": בטל כל APPROVED אחר של אותו מתאמן, פרט ללינק הזה
+        // מימוש מומלץ של הפונקציה: revokeAllApprovedForTrainee(traineeId, { exceptId })
+        await revokeAllApprovedForTrainee(approved.traineeId, { exceptId: approved._id });
+
+        return res.status(200).json({ message: 'Request approved', link: approved });
     } catch (e) {
         console.error('approveJoinRequest error:', e);
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
+
 
 /**
  * Coach -> reject a pending join request
@@ -203,17 +216,27 @@ export async function approveJoinRequest(req, res) {
 export async function rejectJoinRequest(req, res) {
     try {
         const { linkId } = req.params;
-        if (!ObjectId.isValid(linkId)) return res.status(400).json({ message: 'Invalid linkId' });
+        if (!ObjectId.isValid(linkId)) {
+        return res.status(400).json({ message: 'Invalid linkId' });
+        }
 
-        const rejected = await rejectLink(linkId, req.user._id);
-        if (!rejected) return res.status(404).json({ message: 'Request not found or not pending' });
+        const out = await rejectLink(linkId, req.user._id);
 
-        return res.json({ message: 'Request rejected', link: rejected });
+        if (!out) {
+        return res.status(404).json({ message: 'Request not found or not pending' });
+        }
+
+        if (out._conflict === 'already-rejected') {
+        return res.status(409).json({ message: 'Request already rejected', link: out.doc });
+        }
+
+        return res.json({ message: 'Request rejected', link: out });
     } catch (e) {
         console.error('rejectJoinRequest error:', e);
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
+
 
 /**
  * Coach -> list current subscribers (approved links)
@@ -237,17 +260,30 @@ export async function listSubscribers(req, res) {
 export async function revokeSubscriber(req, res) {
     try {
         const { linkId } = req.params;
-        if (!ObjectId.isValid(linkId)) return res.status(400).json({ message: 'Invalid linkId' });
+        if (!ObjectId.isValid(linkId)) {
+        return res.status(400).json({ message: 'Invalid linkId' });
+        }
 
-        const revoked = await revokeLink(linkId, req.user._id);
-        if (!revoked) return res.status(404).json({ message: 'Subscription not found or not active' });
+        const out = await revokeLink(linkId, req.user._id);
 
-        return res.json({ message: 'Subscriber revoked', link: revoked });
+        // לא נמצא / לא APPROVED / לא שייך למאמן
+        if (!out) {
+        return res.status(404).json({ message: 'Subscription not found or not active' });
+        }
+
+        // כבר מבוטל → החזר 409 עם פרטים
+        if (out._conflict === 'already-revoked') {
+        return res.status(409).json({ message: 'Subscription already revoked', link: out.doc });
+        }
+
+        // הצלחה
+        return res.json({ message: 'Subscriber revoked', link: out });
     } catch (e) {
         console.error('revokeSubscriber error:', e);
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
+
 
 /* =========================================================
  * Coach read-only: trainee history
