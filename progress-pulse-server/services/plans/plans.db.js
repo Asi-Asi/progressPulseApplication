@@ -54,3 +54,67 @@ export async function upsertPlanForUser(userId, doc) {
         if (client) await client.close();
     }
 }
+
+
+
+
+export async function findPlanViewByUserId(userId) {
+    let client = null;
+    try {
+        client = await MongoClient.connect(CN_STR);
+        const db = client.db(DB_NAME);
+
+        // 1) שלוף את התוכנית הגולמית
+        const plan = await db
+        .collection(COLLECTION)
+        .findOne({ userId: new ObjectId(userId) });
+
+        if (!plan) return null;
+
+        // 2) אסוף את כל מזהי התרגילים (תמיכה גם ב-exercises וגם ב-items)
+        const allIds = Array.from(
+        new Set(
+            (plan.days || [])
+            .flatMap(d => (Array.isArray(d.items) ? d.items : (d.exercises || [])))
+            .map(it => String(it.exerciseId))
+        )
+        );
+
+        // 3) טען מטא-דאטה מה-Exercises במכה אחת
+        const metaMap = {};
+        if (allIds.length) {
+        const rows = await db
+            .collection(EXERCISES)
+            .find({ _id: { $in: allIds.map(id => new ObjectId(id)) } })
+            .project({ name: 1, muscle: 1 })
+            .toArray();
+        for (const r of rows) metaMap[String(r._id)] = { name: r.name, muscle: r.muscle };
+        }
+
+        // 4) בנה payload עקבי ללקוח
+        const payload = {
+        days: (plan.days || []).map(d => {
+            const list = Array.isArray(d.items) ? d.items : (d.exercises || []);
+            return {
+            dayNumber: Number(d.dayNumber ?? d.day ?? 0),
+            items: list.map(it => {
+                const idStr = String(it.exerciseId);
+                return {
+                exerciseId: idStr,
+                sets: Number(it.sets) || 1,
+                name: metaMap[idStr]?.name ?? null,
+                muscle: metaMap[idStr]?.muscle ?? null,
+                };
+            }),
+            };
+        }),
+        };
+
+        return payload;
+    } catch (error) {
+        console.error('Error building plan view:', error);
+        throw error;
+    } finally {
+        if (client) await client.close();
+    }
+    }

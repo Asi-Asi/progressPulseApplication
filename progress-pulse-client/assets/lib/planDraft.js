@@ -64,15 +64,15 @@ export const planDraft = {
   hydrateFromServer(serverDays) {
   const mapped = (serverDays || []).map((d) => {
     // accept either d.exercises (correct) or legacy d.items
-    const src = Array.isArray(d.exercises) ? d.exercises : (d.items || []);
+    const list = Array.isArray(d.items) ? d.items : (d.exercises || []);
     return {
       id: Number(d.dayNumber),
-      name: `Day ${d.dayNumber}`,
+      name:`Day ${d.dayNumber}`,
       locked: false,
-      exercises: src.map((it) => ({
-        id: it.exerciseId,
-        name: `#${it.exerciseId}`,
-        muscle: '',
+      exercises: list.map((it) => ({
+        id: String(it.exerciseId),
+        name: it.name ||`#${it.exerciseId}`,
+        muscle: it.muscle ||'',
         sets: Number(it.sets ?? 1),
       })),
     };
