@@ -80,7 +80,6 @@ export default function BuildWorkoutPlanScreen() {
   async function handleSavePlan() {
     try {
       const payload = actions.toServerPayload();
-      console.log('PUT /api/plans/me payload =', JSON.stringify(payload, null, 2));
       await saveMyPlan({ token: accessToken, days: payload.days });
       actions.markClean();
       Alert.alert('Saved', 'Your plan was saved successfully');
