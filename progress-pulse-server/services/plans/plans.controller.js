@@ -1,5 +1,5 @@
 // services/plans/plans.controller.js
-import { findPlanByUserId, upsertPlanForUser } from './plans.db.js';
+import { findPlanByUserId, upsertPlanForUser, findPlanViewByUserId } from './plans.db.js';
 import { validatePlanPayload, normalizePlanForStore } from './plans.model.js';
 
 // helper קטן: בונה map של id->meta
