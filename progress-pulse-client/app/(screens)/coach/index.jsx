@@ -1,5 +1,5 @@
 // app/(screens)/coach/index.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -12,24 +12,18 @@ import {
   Platform,
   Share,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AppLogo from "../../../assets/components/ui/AppLogo";
+import BottomTabs from "../../../assets/components/navigation/BottomTabs";
 
-import BottomTabs from "../../../assets/components/navigation/BottomTabs"; // <-- tabs
-
-
-/* ===== Demo data ===== */
-const DEMO_SUBSCRIBERS = [
-  { id: "u101", name: "Ava Johnson",  email: "ava.johnson@example.com",  avatarUrl: "", since: "2025-07-12", lastWorkoutDate: "2025-08-30", status: "approved" },
-  { id: "u102", name: "Ben Carter",   email: "ben.carter@example.com",   avatarUrl: "", since: "2025-06-03", lastWorkoutDate: "2025-08-27", status: "approved" },
-  { id: "u105", name: "Ella Rossi",   email: "ella.rossi@example.com",   avatarUrl: "", since: "2025-04-11", lastWorkoutDate: "2025-08-19", status: "approved" },
-];
-
-const DEMO_REQUESTS = [
-  { id: "u201", name: "Frank Miller", email: "frank.miller@example.com", avatarUrl: "", requestedOn: "2025-08-29" },
-  { id: "u202", name: "Grace Park",   email: "grace.park@example.com",   avatarUrl: "", requestedOn: "2025-08-28" },
-];
+import {
+  getCoachCode, rotateCoachCode,
+  listJoinRequests, approveJoinRequest, rejectJoinRequest,
+  listSubscribers as apiListSubscribers, revokeSubscriber,
+  getTraineeHistory // (reserved for navigation)
+} from "../../../assets/api/coach.api";
 
 /* ===== Helpers ===== */
 const formatDateEN = (iso) => {
@@ -42,7 +36,6 @@ const formatDateEN = (iso) => {
     return `${M[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   }
 };
-const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const confirmAction = async (title, message) => {
   if (Platform.OS === "web") return window.confirm(`${title}\n${message}`);
@@ -65,10 +58,10 @@ async function copyToClipboard(text) {
   Alert.alert("Coach code", text);
 }
 
-/* ===== Coach Code Card (wrap-friendly) ===== */
+/* ===== Coach Code Card ===== */
 function CoachCodeCard({ coachCode, onRegenerate }) {
   const onShare = async () => {
-    const message = `Join my coaching on Progress Pulse.\nCoach code: ${coachCode}`;
+    const message = `Join my coaching on Progress Pulse.\nCoach code: ${coachCode ?? "—"}`;
     try {
       if (Platform.OS === "web") {
         if (navigator?.share) await navigator.share({ title: "Coach Code", text: message });
@@ -86,12 +79,12 @@ function CoachCodeCard({ coachCode, onRegenerate }) {
       <View className="flex-row flex-wrap gap-2 items-stretch">
         <View className="flex-row items-center px-3 rounded-lg bg-field border border-fieldBorder h-11 flex-1">
           <Text numberOfLines={1} className="text-primary font-extrabold tracking-wider">
-            {coachCode}
+            {coachCode ?? "—"}
           </Text>
         </View>
 
         <TouchableOpacity
-          onPress={() => copyToClipboard(coachCode)}
+          onPress={() => coachCode && copyToClipboard(coachCode)}
           className="px-3 rounded-lg bg-field border border-fieldBorder h-11 items-center justify-center"
         >
           <View className="flex-row items-center gap-1">
@@ -128,13 +121,34 @@ function CoachCodeCard({ coachCode, onRegenerate }) {
   );
 }
 
+/* ===== View mappers (Server → UI) ===== */
+const mapSubscriber = (link) => ({
+  _linkId: link._id,                                  // for revoke
+  id: String(link.traineeId),                         // for history navigation
+  name: link.traineeName || link.traineeEmail || String(link.traineeId).slice(-6),
+  email: link.traineeEmail || "",
+  avatarUrl: link.traineeAvatarUrl || "",
+  since: link.createdAt || null,
+  lastWorkoutDate: link.lastWorkoutDate || null,
+  status: link.status,
+});
+
+const mapRequest = (link) => ({
+  _linkId: link._id,                                  // for approve/reject
+  id: String(link.traineeId),
+  name: link.traineeName || link.traineeEmail || String(link.traineeId).slice(-6),
+  email: link.traineeEmail || "",
+  avatarUrl: link.traineeAvatarUrl || "",
+  requestedOn: link.createdAt || null,
+});
+
 /* ===== Screen ===== */
 export default function CoachScreen() {
   const router = useRouter();
 
-  const [subs, setSubs] = useState(DEMO_SUBSCRIBERS);
-  const [requests, setRequests] = useState(DEMO_REQUESTS);
-  const [coachCode, setCoachCode] = useState("FITSAM-4821");
+  const [subs, setSubs] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [coachCode, setCoachCode] = useState(null);
 
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState("approved"); // 'approved' | 'requests'
@@ -145,7 +159,34 @@ export default function CoachScreen() {
     requests: requests.length,
   };
 
-  const listSubscribers = useMemo(() => {
+  // Load from API
+  const loadAll = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) throw new Error("Missing access token");
+
+      const [codeResp, reqResp, subResp] = await Promise.all([
+        getCoachCode({ token }),
+        listJoinRequests({ token, limit: 50, skip: 0 }),
+        apiListSubscribers({ token, limit: 50, skip: 0 }),
+      ]);
+
+      setCoachCode(codeResp?.code ?? null);
+      setRequests((reqResp?.items || []).map(mapRequest));
+      setSubs((subResp?.items || []).map(mapSubscriber));
+    } catch (e) {
+      const msg = e?.payload?.message || e?.message || "Failed to load coach data";
+      Alert.alert("Error", msg);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Derived UI lists
+  const subsView = useMemo(() => {
     const base = subs.filter((s) => s.status === "approved");
     const q = query.trim().toLowerCase();
     const filtered = q
@@ -159,21 +200,17 @@ export default function CoachScreen() {
     });
   }, [subs, query]);
 
-  const listRequests = useMemo(() => {
+  const requestsView = useMemo(() => {
     const q = query.trim().toLowerCase();
     const filtered = q
       ? requests.filter((r) => r.name.toLowerCase().includes(q) || r.email.toLowerCase().includes(q))
       : requests;
     return [...filtered].sort(
-      (a, b) => new Date(b.requestedOn).getTime() - new Date(a.requestedOn).getTime()
+      (a, b) => new Date(b.requestedOn || 0).getTime() - new Date(a.requestedOn || 0).getTime()
     );
   }, [requests, query]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await new Promise((r) => setTimeout(r, 500));
-    setRefreshing(false);
-  };
+  const onRefresh = async () => { await loadAll(); };
 
   const goToHistory = (s) => {
     router.push({
@@ -182,27 +219,67 @@ export default function CoachScreen() {
     });
   };
 
-  const approveRequest = async (r) => {
+  /* ===== Server Actions ===== */
+  const approveRequestFn = async (r) => {
     const ok = await confirmAction("Approve subscriber?", `Approve ${r.name} to join?`);
     if (!ok) return;
-    setRequests((prev) => prev.filter((x) => x.id !== r.id));
-    setSubs((prev) => [
-      ...prev,
-      { id: r.id, name: r.name, email: r.email, avatarUrl: r.avatarUrl || "", since: todayISO(), lastWorkoutDate: null, status: "approved" },
-    ]);
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      await approveJoinRequest({ token, linkId: r._linkId });
+      await loadAll();
+    } catch (e) {
+      const status = e?.status;
+      const msg = e?.payload?.message || (status === 409 ? "Already approved" : "Approve failed");
+      Alert.alert("Error", msg);
+    }
   };
 
-  const declineRequest = async (r) => {
+  const declineRequestFn = async (r) => {
     const ok = await confirmAction("Decline request?", `Decline ${r.name}'s request?`);
     if (!ok) return;
-    setRequests((prev) => prev.filter((x) => x.id !== r.id));
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      await rejectJoinRequest({ token, linkId: r._linkId });
+      await loadAll();
+    } catch (e) {
+      const status = e?.status;
+      const msg = e?.payload?.message || (status === 409 ? "Already rejected" : "Reject failed");
+      Alert.alert("Error", msg);
+    }
   };
 
-  const regenerateCode = () => {
-    const rnd = Math.floor(1000 + Math.random() * 9000);
-    setCoachCode(`FITSAM-${rnd}`);
+  const regenerateCode = async () => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) {
+        Alert.alert("Session", "Missing token. Please log in again.");
+        return;
+      }
+      const { code } = await rotateCoachCode({ token });
+      setCoachCode(code);
+      Alert.alert("New coach code", code);
+    } catch (e) {
+      const status = e?.status;
+      const msg = e?.payload?.message || (status === 401 ? "Session expired. Please log in." : "Failed to rotate code");
+      Alert.alert("Error", msg);
+    }
   };
 
+  const revokeFn = async (s) => {
+    const ok = await confirmAction("Revoke subscriber?", `Revoke ${s.name}?`);
+    if (!ok) return;
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      await revokeSubscriber({ token, linkId: s._linkId });
+      await loadAll();
+    } catch (e) {
+      const status = e?.status;
+      const msg = e?.payload?.message || (status === 409 ? "Already revoked" : "Revoke failed");
+      Alert.alert("Error", msg);
+    }
+  };
+
+  /* ===== UI ===== */
   const RowBadge = ({ label }) => (
     <View className="px-3 py-1 rounded-full bg-primary/90">
       <Text className="text-onPrimary font-extrabold text-xs">{label}</Text>
@@ -246,12 +323,19 @@ export default function CoachScreen() {
             </Text>
           </View>
 
-          <View className="mt-3">
+          <View className="mt-3 flex-row gap-8">
             <TouchableOpacity
               onPress={() => goToHistory(s)}
               className="self-start px-3 py-1.5 rounded-lg bg-field border border-fieldBorder"
             >
               <Text className="text-text font-bold text-xs">View history</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => revokeFn(s)}
+              className="self-start px-3 py-1.5 rounded-lg bg-field border border-fieldBorder"
+            >
+              <Text className="text-text font-bold text-xs">Revoke</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -280,10 +364,10 @@ export default function CoachScreen() {
           </Text>
 
           <View className="flex-row gap-2 mt-3">
-            <TouchableOpacity onPress={() => approveRequest(r)} className="px-3 py-2 rounded-lg bg-primary">
+            <TouchableOpacity onPress={() => approveRequestFn(r)} className="px-3 py-2 rounded-lg bg-primary">
               <Text className="text-onPrimary font-extrabold text-xs">Approve</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => declineRequest(r)} className="px-3 py-2 rounded-lg bg-field border border-fieldBorder">
+            <TouchableOpacity onPress={() => declineRequestFn(r)} className="px-3 py-2 rounded-lg bg-field border border-fieldBorder">
               <Text className="text-text font-bold text-xs">Decline</Text>
             </TouchableOpacity>
           </View>
@@ -346,20 +430,21 @@ export default function CoachScreen() {
       >
         <View className="py-4 space-y-3">
           {activeTab === "requests" ? (
-            listRequests.length === 0 ? (
+            requestsView.length === 0 ? (
               <Text className="text-muted text-center mt-8">No pending requests.</Text>
             ) : (
-              listRequests.map((r) => <RequestCard key={r.id} r={r} />)
+              requestsView.map((r) => <RequestCard key={r._linkId} r={r} />)
             )
-          ) : listSubscribers.length === 0 ? (
+          ) : subsView.length === 0 ? (
             <Text className="text-muted text-center mt-8">No subscribers found.</Text>
           ) : (
-            listSubscribers.map((s) => <SubscriberCard key={s.id} s={s} />)
+            subsView.map((s) => <SubscriberCard key={s._linkId} s={s} />)
           )}
         </View>
 
         <View className="h-8" />
       </ScrollView>
+
       <BottomTabs role={30} currentHref="/(screens)/coach/subscribers" />
     </View>
   );

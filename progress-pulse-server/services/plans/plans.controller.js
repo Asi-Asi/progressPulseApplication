@@ -5,7 +5,6 @@ import { validatePlanPayload, normalizePlanForStore } from './plans.model.js';
 
 
 // GET /api/plans/me
-// GET /api/plans/me
 export async function getMyPlan(req, res) {
     try {
         const userId = req.user?._id || req.user?.id;

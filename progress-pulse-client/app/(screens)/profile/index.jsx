@@ -1,46 +1,45 @@
 // app/(screens)/profile/index.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Image,
-  Alert,
-  Platform,
-  Share,
+  View, Text, ScrollView, TouchableOpacity, Alert, Platform, Share, KeyboardAvoidingView
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AppLogo from "../../../assets/components/ui/AppLogo";
-import BottomTabs from "../../../assets/components/navigation/BottomTabs"; // <-- tabs
+import BottomTabs from "../../../assets/components/navigation/BottomTabs";
+import { API_URL } from "../../../assets/api/client";
 
+import UserInfoSection from "../../../assets/components/screens/profile/UserInfoSection";
+import ChangePasswordSection from "../../../assets/components/screens/profile/ChangePasswordSection";
+import RoleBasedSection from "../../../assets/components/screens/profile/RoleBasedSection";
 
-/* ===== role numbers =====
-   10 = admin, 20 = trainee, 30 = coach
-*/
 const ROLES = { ADMIN: 10, TRAINEE: 20, COACH: 30 };
-const roleLabel = (n) =>
-  n === ROLES.ADMIN ? "admin" : n === ROLES.COACH ? "coach" : "trainee";
+const alertSafe = (t, m = "") => (Platform.OS === "web" ? alert(`${t}${m ? "\n" + m : ""}`) : Alert.alert(t, m));
 
-/* ===== Demo user (replace with your auth state) ===== */
-const DEMO_USER = {
-  id: "me-001",
-  name: "Sam Fit",
-  email: "sam@example.com",
-  avatarUrl: "",
-  role: ROLES.TRAINEE, // change to 10/20/30 to see each view
-  coachCode: "FITSAM-4821", // only used when role === coach
-};
-
-/* ===== helpers ===== */
-function alertSafe(title, msg = "") {
-  if (Platform.OS === "web") alert(`${title}${msg ? "\n" + msg : ""}`);
-  else Alert.alert(title, msg);
+/* tiny fetch wrapper */
+async function request(path, { method = "GET", token, body } = {}) {
+  const res = await fetch(`${API_URL}${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: "include",
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const raw = await res.text();
+  const data = raw ? (() => { try { return JSON.parse(raw); } catch { return raw; } })() : null;
+  if (!res.ok) {
+    const err = new Error((data && data.message) || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.payload = typeof data === "string" ? { raw: data } : data;
+    throw err;
+  }
+  return data;
 }
-async function copyText(text) {
+
+/* clipboard fallback */
+const copyText = async (text) => {
   try {
     if (Platform.OS === "web" && navigator?.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
@@ -49,108 +48,164 @@ async function copyText(text) {
     }
   } catch {}
   alertSafe("Coach Code", text);
-}
-/** Demo-only code generator (server must enforce uniqueness) */
-function generateCoachCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const pick = (n) =>
-    Array.from({ length: n }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
-  return `${pick(4)}-${pick(4)}`;
-}
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
 
-  // user state (swap to your real store/API)
-  const [user, setUser] = useState(DEMO_USER);
-  const isAdmin = user.role === ROLES.ADMIN;
-  const isCoach = user.role === ROLES.COACH;
-  const isTrainee = user.role === ROLES.TRAINEE;
+  const [user, setUser] = useState(null); // from /api/users/me
+  const roleLevel = user?.roleLevel ?? ROLES.TRAINEE;
+  const isCoach = roleLevel === ROLES.COACH;
 
-  // editable fields
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
+  // profile fields
+  const [firstName, setFirstName] = useState("");
+  const [lastName,  setLastName]  = useState("");
+  const [email,     setEmail]     = useState("");
 
-  // trainee: join a coach
-  const [joinCode, setJoinCode] = useState("");
+  // password fields
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword,     setNewPassword]     = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [saving, setSaving]             = useState(false);
+  const [changingPass, setChangingPass] = useState(false);
 
-  // coach-only: code management
-  const [coachCode, setCoachCode] = useState(user.coachCode);
+  // role-based
+  const [coachCode, setCoachCode] = useState(null);
+  const [joinCode,  setJoinCode]  = useState("");
 
-  const onSaveProfile = () => {
-    setUser((u) => ({
-      ...u,
-      name: name.trim() || u.name,
-      email: email.trim() || u.email,
-    }));
-    alertSafe("Saved", "Your profile has been updated.");
+  /* ----- load profile + coach code ----- */
+  const loadMe = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) throw new Error("Missing access token");
+
+      const me = await request("/api/users/me", { token });
+      setUser(me);
+      setFirstName(me.firstName || "");
+      setLastName(me.lastName || "");
+      setEmail(me.email || "");
+
+      if (me.roleLevel === ROLES.COACH) {
+        const codeRes = await request("/api/coach/code", { token });
+        setCoachCode(codeRes?.code ?? null);
+      } else {
+        setCoachCode(null);
+      }
+    } catch (e) {
+      alertSafe("Error", e?.payload?.message || e?.message || "Failed to load profile");
+    }
+  }, []);
+
+  useEffect(() => { loadMe(); }, [loadMe]);
+
+  /* ----- save profile ----- */
+  const onSaveProfile = async () => {
+    try {
+      setSaving(true);
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) throw new Error("Missing access token");
+      const body = {
+        firstName: String(firstName).trim(),
+        lastName : String(lastName).trim(),
+        email    : String(email).trim().toLowerCase(), // server enforces read-only if you want
+      };
+      await request("/api/users/me", { method: "PUT", token, body });
+      alertSafe("Saved", "Your profile has been updated.");
+      await loadMe();
+    } catch (e) {
+      alertSafe("Save failed", e?.payload?.message || e?.message || "Please try again");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const onPressTrainingHistory = () => {
-    router.push("/(screens)/tracking/training history");
-  };
-  const onPressCoachDashboard = () => {
-    router.push("/(screens)/coach");
-  };
-  const onPressAdminConsole = () => {
-    router.push("/(screens)/admin");
+  /* ----- change password ----- */
+  const onChangePassword = async () => {
+    try {
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        alertSafe("Missing fields", "Please fill all password fields.");
+        return;
+      }
+      if (newPassword.length < 6) {
+        alertSafe("Weak password", "New password must be at least 6 characters.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        alertSafe("Mismatch", "New password and confirmation do not match.");
+        return;
+      }
+      setChangingPass(true);
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) throw new Error("Missing access token");
+      await request("/api/users/me/password", {
+        method: "PUT",
+        token,
+        body: { currentPassword, newPassword },
+      });
+      alertSafe("Password changed", "Your password has been updated.");
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+    } catch (e) {
+      alertSafe("Change failed", e?.payload?.message || e?.message || "Please try again");
+    } finally {
+      setChangingPass(false);
+    }
   };
 
-  const onJoinWithCode = () => {
-    const code = joinCode.trim();
+  /* ----- trainee: join with code ----- */
+  const onJoinWithCode = async () => {
+    const code = (joinCode || "").trim();
     if (!code) {
       alertSafe("Enter a code", "Ask your coach for their code and paste it here.");
       return;
     }
-    // TODO: POST /coach-requests { code }
-    alertSafe("Request sent", `We sent a join request using code: ${code}`);
-    setJoinCode("");
+    try {
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) throw new Error("Missing access token");
+      await request("/api/coach/join", { method: "POST", token, body: { code } });
+      alertSafe("Request sent", "Your join request was sent to the coach.");
+      setJoinCode("");
+    } catch (e) {
+      alertSafe("Join failed", e?.payload?.message || e?.message || "Please try again");
+    }
   };
 
-  const regenerateCoachCode = () => {
-    const next = generateCoachCode();
-    setCoachCode(next);
-    setUser((u) => ({ ...u, coachCode: next }));
-    // TODO: POST /coach/code { newCode: next } (unique index enforced server-side)
-  };
-
-  const shareCoachCode = async () => {
-    const message = `Join my coaching on Progress Pulse.\nCoach code: ${coachCode}`;
+  /* ----- coach: share / regenerate code ----- */
+  const onShareCoachCode = async () => {
+    const message = `Join my coaching on Progress Pulse.\nCoach code: ${coachCode ?? "—"}`;
     try {
       if (Platform.OS === "web") {
         if (navigator?.share) await navigator.share({ title: "Coach Code", text: message });
-        else alertSafe("Share this code", message);
+        else alertSafe("Share", message);
       } else {
         await Share.share({ message });
       }
     } catch {}
   };
 
-  const onLogout = async () => {
+  const onRegenerateCoachCode = async () => {
     try {
-      await AsyncStorage.removeItem("token"); // adjust if your token key is different
-    } catch {}
-    router.replace("/(screens)/auth"); // back to login
+      const token = await AsyncStorage.getItem("accessToken");
+      if (!token) throw new Error("Missing access token");
+      const { code } = await request("/api/coach/code/new", { method: "POST", token });
+      setCoachCode(code);
+      alertSafe("New coach code", code);
+    } catch (e) {
+      alertSafe("Rotate failed", e?.payload?.message || e?.message || "Please try again");
+    }
   };
 
-  const Avatar = () => (
-    <View className="w-16 h-16 rounded-full bg-field border border-fieldBorder items-center justify-center overflow-hidden">
-      {user.avatarUrl ? (
-        <Image source={{ uri: user.avatarUrl }} className="w-16 h-16" />
-      ) : (
-        <Text className="text-primary font-extrabold text-xl">
-          {user.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
-        </Text>
-      )}
-    </View>
-  );
+  /* ----- navigation shortcuts ----- */
+  const onOpenHistory         = () => router.push("/(screens)/tracking/training history");
+  const onOpenCoachDashboard  = () => router.push("/(screens)/coach");
+  const onOpenAdminConsole    = () => router.push("/(screens)/admin");
 
-  const Field = ({ label, children }) => (
-    <View className="mb-3">
-      <Text className="text-muted mb-1">{label}</Text>
-      {children}
-    </View>
-  );
+  /* ----- logout ----- */
+  const onLogout = async () => {
+    try {
+      await AsyncStorage.multiRemove(["accessToken", "roleLevel", "userId"]);
+    } catch {}
+    router.replace("/(screens)/auth");
+  };
 
   return (
     <View className="flex-1 bg-bg">
@@ -162,181 +217,75 @@ export default function ProfileScreen() {
         }}
       />
 
-      <ScrollView className="flex-1 px-4 pt-4">
-        {/* Title */}
-        <Text className="text-text text-2xl font-extrabold">Profile</Text>
-        <Text className="text-muted mt-1">Manage your account and connections.</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
+      >
+        <ScrollView
+          className="flex-1 px-4 pt-4"
+          contentContainerStyle={{ paddingBottom: 140 }} // keeps "Log out" above the tabs
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text className="text-text text-2xl font-extrabold">Profile</Text>
+          <Text className="text-muted mt-1">Manage your account and connections.</Text>
 
-        {/* Identity card */}
-        <View className="mt-4 bg-card rounded-xl border border-border p-4">
-          <View className="flex-row items-center gap-3">
-            <Avatar />
-            <View className="flex-1">
-              <Text className="text-text font-bold text-lg">{user.name}</Text>
-              <Text className="text-muted">{user.email}</Text>
-            </View>
-            <View className="px-3 py-1 rounded-full bg-primary/90">
-              <Text className="text-onPrimary font-extrabold text-xs">
-                {roleLabel(user.role)}
-              </Text>
-            </View>
-          </View>
+          {/* User info & fields (email read-only) */}
+          <UserInfoSection
+            user={user}
+            roleLevel={roleLevel}
+            firstName={firstName}
+            setFirstName={setFirstName}
+            lastName={lastName}
+            setLastName={setLastName}
+            email={email}
+            onSave={onSaveProfile}
+            saving={saving}
+            onOpenHistory={onOpenHistory}
+          />
 
-          {/* Editable fields */}
+          {/* Change password (autofill blocked) */}
+          <ChangePasswordSection
+            currentPassword={currentPassword}
+            setCurrentPassword={setCurrentPassword}
+            newPassword={newPassword}
+            setNewPassword={setNewPassword}
+            confirmPassword={confirmPassword}
+            setConfirmPassword={setConfirmPassword}
+            onChangePassword={onChangePassword}
+            changingPass={changingPass}
+          />
+
+          {/* Role‑based section (trainee / coach / admin) */}
+          <RoleBasedSection
+            roleLevel={roleLevel}
+            // trainee
+            joinCode={joinCode}
+            setJoinCode={setJoinCode}
+            onJoinWithCode={onJoinWithCode}
+            // coach
+            coachCode={coachCode}
+            onCopyCode={copyText}
+            onShareCode={onShareCoachCode}
+            onRegenerateCode={onRegenerateCoachCode}
+            onOpenCoachDashboard={onOpenCoachDashboard}
+            // admin
+            onOpenAdminConsole={onOpenAdminConsole}
+          />
+
+          {/* Logout */}
           <View className="mt-4">
-            <Field label="Name">
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Your name"
-                placeholderTextColor="#667085"
-                className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-11"
-              />
-            </Field>
-
-            <Field label="Email">
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor="#667085"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-11"
-              />
-            </Field>
-
-            <View className="flex-row gap-2 mt-4">
-              <TouchableOpacity
-                onPress={onSaveProfile}
-                className="px-4 h-11 rounded-lg bg-primary items-center justify-center"
-              >
-                <Text className="text-onPrimary font-extrabold">Save changes</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={onPressTrainingHistory}
-                className="px-4 h-11 rounded-lg bg-field border border-fieldBorder items-center justify-center"
-              >
-                <Text className="text-text font-bold">Training history</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Trainee-only: Join a coach */}
-        {isTrainee && (
-          <View className="mt-4 bg-card rounded-xl border border-border p-4">
-            <Text className="text-text font-extrabold mb-2">Join a coach</Text>
-            <Text className="text-muted mb-3">
-              Enter the code your coach shared with you to send a join request.
-            </Text>
-
-            <View className="flex-row gap-2">
-              <TextInput
-                value={joinCode}
-                onChangeText={setJoinCode}
-                placeholder="e.g. ABCD-234F"
-                placeholderTextColor="#667085"
-                autoCapitalize="characters"
-                className="flex-1 bg-field border border-fieldBorder text-text rounded-lg px-3 h-11"
-              />
-              <TouchableOpacity
-                onPress={onJoinWithCode}
-                className="px-4 h-11 rounded-lg bg-primary items-center justify-center"
-              >
-                <Text className="text-onPrimary font-extrabold">Send</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Coach-only: Code panel + dashboard link */}
-        {isCoach && (
-          <View className="mt-4 bg-card rounded-xl border border-border p-4">
-            <Text className="text-text font-extrabold mb-2">Your coach code</Text>
-
-            <View className="flex-row flex-wrap gap-2 items-stretch">
-              <View className="flex-row items-center px-3 rounded-lg bg-field border border-fieldBorder h-11 flex-1">
-                <Text numberOfLines={1} className="text-primary font-extrabold tracking-wider">
-                  {coachCode}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => copyText(coachCode)}
-                className="px-3 rounded-lg bg-field border border-fieldBorder h-11 items-center justify-center"
-              >
-                <View className="flex-row items-center gap-1">
-                  <MaterialCommunityIcons name="content-copy" size={16} color="#2C2C2C" />
-                  <Text className="text-text font-bold">Copy</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={shareCoachCode}
-                className="px-3 rounded-lg bg-field border border-fieldBorder h-11 items-center justify-center"
-              >
-                <View className="flex-row items-center gap-1">
-                  <MaterialCommunityIcons name="share-variant" size={16} color="#2C2C2C" />
-                  <Text className="text-text font-bold">Share</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={regenerateCoachCode}
-                className="px-3 rounded-lg bg-primary h-11 items-center justify-center"
-              >
-                <View className="flex-row items-center gap-1">
-                  <MaterialCommunityIcons name="reload" size={16} color="#0B0F12" />
-                  <Text className="text-onPrimary font-extrabold">New</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            <Text className="text-muted mt-2 text-xs">
-              Share this code with trainees. They’ll send you a join request using it.
-            </Text>
-
-            <View className="mt-4">
-              <TouchableOpacity
-                onPress={onPressCoachDashboard}
-                className="self-start px-4 h-11 rounded-lg bg-field border border-fieldBorder items-center justify-center"
-              >
-                <Text className="text-text font-bold">Open coach dashboard</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Admin-only: Console link */}
-        {isAdmin && (
-          <View className="mt-4 bg-card rounded-xl border border-border p-4">
-            <Text className="text-text font-extrabold mb-1">Admin</Text>
-            <Text className="text-muted mb-3">Manage users, requests, and reports.</Text>
             <TouchableOpacity
-              onPress={onPressAdminConsole}
-              className="self-start px-4 h-11 rounded-lg bg-primary items-center justify-center"
+              onPress={onLogout}
+              className="w-full h-11 rounded-lg bg-card border border-border items-center justify-center"
             >
-              <Text className="text-onPrimary font-extrabold">Open admin console</Text>
+              <Text className="text-text font-bold">Log out</Text>
             </TouchableOpacity>
           </View>
-        )}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-        {/* Logout (all roles) */}
-        <View className="mt-4">
-          <TouchableOpacity
-            onPress={onLogout}
-            className="w-full h-11 rounded-lg bg-card border border-border items-center justify-center"
-          >
-            <Text className="text-text font-bold">Log out</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View className="h-10" />
-      </ScrollView>
-            <BottomTabs role={20} currentHref="/(screens)/profile" />
-      
+      <BottomTabs role={roleLevel} currentHref="/(screens)/profile" />
     </View>
   );
 }

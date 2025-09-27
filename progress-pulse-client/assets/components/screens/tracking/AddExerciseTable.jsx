@@ -1,0 +1,187 @@
+import React from "react";
+import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+export default function AddExerciseTable({
+    log = {},
+    updateSet,
+    removeSet,
+    addSet,
+    removeExerciseFromLog,
+    onOpenPicker,
+    COL,
+}) {
+    return (
+        <View className="mt-4 bg-card rounded-xl border border-border">
+        <View className="flex-row items-center justify-between px-4 py-3">
+            <Text className="text-text font-extrabold">Add exercise</Text>
+            <TouchableOpacity
+            onPress={onOpenPicker}
+            className="p-2 rounded-lg bg-field border border-fieldBorder"
+            >
+            <MaterialCommunityIcons name="plus" size={20} color="#007BFF" />
+            </TouchableOpacity>
+        </View>
+
+        {/* swipe hint */}
+        <View className="px-4 pb-1 -mt-2">
+            <View className="self-start flex-row items-center gap-1.5 px-2 py-1 rounded-full bg-field border border-fieldBorder">
+            <MaterialCommunityIcons name="gesture-swipe-horizontal" size={14} color="#667085" />
+            <Text className="text-[12px] text-muted">Swipe left/right to see all columns</Text>
+            </View>
+        </View>
+
+        <View className="border-t border-border">
+            <ScrollView horizontal showsHorizontalScrollIndicator>
+            <View
+                style={{
+                minWidth: COL.EX_MIN + COL.SET_W + COL.NUM_W + COL.NUM_W + COL.BTN_W,
+                }}
+            >
+                {/* header */}
+                <View className="flex-row bg-field border-b border-fieldBorder">
+                <View
+                    className="px-3 py-2 border-r border-fieldBorder"
+                    style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}
+                >
+                    <Text className="text-text font-bold">Exercise</Text>
+                </View>
+                <View
+                    className="items-center px-3 py-2 border-r border-fieldBorder"
+                    style={{ width: COL.SET_W }}
+                >
+                    <Text className="text-text font-bold">Set</Text>
+                </View>
+                <View
+                    className="items-center px-3 py-2 border-r border-fieldBorder"
+                    style={{ width: COL.NUM_W }}
+                >
+                    <Text className="text-text font-bold">Reps</Text>
+                </View>
+                <View
+                    className="items-center px-3 py-2 border-r border-fieldBorder"
+                    style={{ width: COL.NUM_W }}
+                >
+                    <Text className="text-text font-bold">Weight</Text>
+                </View>
+                <View className="items-center px-1 py-2" style={{ width: COL.BTN_W }} />
+                </View>
+
+                {/* rows */}
+                {Object.values(log).length === 0 ? (
+                <Text className="text-muted px-4 py-3">No exercises added yet.</Text>
+                ) : (
+                Object.values(log).map(({ exercise, sets }) => (
+                    <View key={exercise.id} className="border-t border-border">
+                    {sets.map((s, idx) => (
+                        <View key={idx} className="flex-row items-stretch">
+                        {idx === 0 ? (
+                            <View
+                            className="px-3 py-3 border-r border-border"
+                            style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}
+                            >
+                            <Text
+                                className="text-text"
+                                style={{ flexShrink: 1, flexWrap: "wrap", lineHeight: 18 }}
+                            >
+                                {exercise.name}
+                            </Text>
+                            <TouchableOpacity
+                                onPress={() => removeExerciseFromLog(exercise.id)}
+                                className="mt-2 self-start px-2 py-1 rounded-lg bg-field border border-fieldBorder"
+                            >
+                                <Text className="text-text text-xs">remove</Text>
+                            </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View
+                            className="border-r border-border"
+                            style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}
+                            />
+                        )}
+
+                        <View
+                            className="items-center justify-center border-r border-border"
+                            style={{ width: COL.SET_W }}
+                        >
+                            <Text className="text-text">set {idx + 1}</Text>
+                        </View>
+
+                        <View
+                            className="justify-center border-r border-border px-2 py-2"
+                            style={{ width: COL.NUM_W }}
+                        >
+                            <TextInput
+                            value={String(s.reps ?? "")}
+                            onChangeText={(v) =>
+                                updateSet(exercise.id, idx, "reps", v.replace(/[^0-9]/g, ""))
+                            }
+                            keyboardType="numeric"
+                            inputMode="numeric"
+                            placeholder="0"
+                            placeholderTextColor="#667085"
+                            className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-10"
+                            />
+                        </View>
+
+                        <View
+                            className="justify-center border-r border-border px-2 py-2"
+                            style={{ width: COL.NUM_W }}
+                        >
+                            <TextInput
+                            value={String(s.weight ?? "")}
+                            onChangeText={(v) =>
+                                updateSet(exercise.id, idx, "weight", v.replace(/[^0-9.]/g, ""))
+                            }
+                            keyboardType="numeric"
+                            inputMode="decimal"
+                            placeholder="0"
+                            placeholderTextColor="#667085"
+                            className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-10"
+                            />
+                        </View>
+
+                        <View
+                            className="items-center justify-center px-1"
+                            style={{ width: COL.BTN_W }}
+                        >
+                            <TouchableOpacity
+                            onPress={() => removeSet(exercise.id, idx)}
+                            className="px-2 py-1 rounded-md bg-field border border-fieldBorder"
+                            accessibilityLabel={`Remove set ${idx + 1}`}
+                            >
+                            <MaterialCommunityIcons
+                                name="trash-can-outline"
+                                size={16}
+                                color="#2C2C2C"
+                            />
+                            </TouchableOpacity>
+                        </View>
+                        </View>
+                    ))}
+
+                    <View className="flex-row border-t border-border">
+                        <View
+                        className="border-r border-border"
+                        style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}
+                        />
+                        <TouchableOpacity
+                        onPress={() => addSet(exercise.id)}
+                        className="items-center justify-center border-r border-border"
+                        style={{ width: COL.SET_W }}
+                        >
+                        <Text className="text-primary font-bold">+ set</Text>
+                        </TouchableOpacity>
+                        <View className="border-r border-border" style={{ width: COL.NUM_W }} />
+                        <View className="border-r border-border" style={{ width: COL.NUM_W }} />
+                        <View style={{ width: COL.BTN_W }} />
+                    </View>
+                    </View>
+                ))
+                )}
+            </View>
+            </ScrollView>
+        </View>
+        </View>
+    );
+}

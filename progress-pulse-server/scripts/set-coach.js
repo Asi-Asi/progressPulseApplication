@@ -2,7 +2,7 @@
 import 'dotenv/config';                  // ← טוען .env אוטומטית
 import { MongoClient } from 'mongodb';
 
-const email = 'test701@example.com'; // mail to give coach role
+const email = 'coach@test.com'; // mail to give coach role
 const newRoleLevel = 30; // COACH
 
 const uri = process.env.CONNECTION_STRING;

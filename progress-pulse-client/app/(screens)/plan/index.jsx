@@ -89,7 +89,7 @@ export default function BuildWorkoutPlanScreen() {
         locked: true,             // ← זה מה שהשרת צריך כדי לנעול ב-DB
       });
       actions.markClean();
-      actions.lockPlan();          // נעילה מקומית של ה-UI
+      actions.lockPlan();          
       Alert.alert('Saved', 'Your plan was saved successfully');
     } catch (e) {
       console.log('saveMyPlan ERROR:', {
