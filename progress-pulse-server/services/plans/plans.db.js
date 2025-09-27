@@ -64,41 +64,39 @@ export async function findPlanViewByUserId(userId) {
         client = await MongoClient.connect(CN_STR);
         const db = client.db(DB_NAME);
 
-        // 1) שלוף את התוכנית הגולמית
-        const plan = await db
-        .collection(COLLECTION)
-        .findOne({ userId: new ObjectId(userId) });
-
+        const plan = await db.collection(COLLECTION).findOne({ userId: new ObjectId(userId) });
         if (!plan) return null;
 
-        // 2) אסוף את כל מזהי התרגילים (תמיכה גם ב-exercises וגם ב-items)
-        const allIds = Array.from(
-        new Set(
-            (plan.days || [])
-            .flatMap(d => (Array.isArray(d.items) ? d.items : (d.exercises || [])))
-            .map(it => String(it.exerciseId))
-        )
-        );
+        // אסוף מזהי תרגילים מכל הימים (תמיכה גם ב-items וגם ב-exercises)
+        const rawIds = (plan.days || [])
+        .flatMap(d => (Array.isArray(d.items) ? d.items : (d.exercises || [])))
+        .map(it => it?.exerciseId)        // יכול להיות undefined/null
+        .filter(Boolean)                  // הסר null/undefined
+        .map(x => (typeof x === 'object' && x?._bsontype === 'ObjectId' ? String(x) : String(x)));
 
-        // 3) טען מטא-דאטה מה-Exercises במכה אחת
+        // סנן ל-24 hex בלבד כדי לא לזרוק חריגה ב-new ObjectId
+        const validIds = Array.from(new Set(rawIds)).filter(id => ObjectId.isValid(id));
+
+        // טען מטא לכל התרגילים בבת אחת
         const metaMap = {};
-        if (allIds.length) {
-        const rows = await db
-            .collection(EXERCISES)
-            .find({ _id: { $in: allIds.map(id => new ObjectId(id)) } })
+        if (validIds.length) {
+        const rows = await db.collection('Exercises')
+            .find({ _id: { $in: validIds.map(id => new ObjectId(id)) } })
             .project({ name: 1, muscle: 1 })
             .toArray();
         for (const r of rows) metaMap[String(r._id)] = { name: r.name, muscle: r.muscle };
         }
 
-        // 4) בנה payload עקבי ללקוח
+        // בנה payload עקבי ללקוח
         const payload = {
         days: (plan.days || []).map(d => {
             const list = Array.isArray(d.items) ? d.items : (d.exercises || []);
             return {
             dayNumber: Number(d.dayNumber ?? d.day ?? 0),
             items: list.map(it => {
-                const idStr = String(it.exerciseId);
+                const idStr = typeof it.exerciseId === 'object' && it.exerciseId?._bsontype === 'ObjectId'
+                ? String(it.exerciseId)
+                : String(it.exerciseId || '');
                 return {
                 exerciseId: idStr,
                 sets: Number(it.sets) || 1,
@@ -111,10 +109,10 @@ export async function findPlanViewByUserId(userId) {
         };
 
         return payload;
-    } catch (error) {
-        console.error('Error building plan view:', error);
-        throw error;
+    } catch (err) {
+        console.error('findPlanViewByUserId error:', err?.stack || err);
+        throw err;
     } finally {
         if (client) await client.close();
     }
-    }
+}
