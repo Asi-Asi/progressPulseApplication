@@ -2,17 +2,7 @@
 import { findPlanByUserId, upsertPlanForUser, findPlanViewByUserId } from './plans.db.js';
 import { validatePlanPayload, normalizePlanForStore } from './plans.model.js';
 
-// helper קטן: בונה map של id->meta
-async function loadExercisesMeta(db, ids) {
-    if (!ids.length) return {};
-    const rows = await db.collection('Exercises')
-        .find({ _id: { $in: ids.map(id => new ObjectId(id)) } })
-        .project({ name: 1, muscle: 1 })
-        .toArray();
-    const map = {};
-    rows.forEach(r => { map[String(r._id)] = { name: r.name, muscle: r.muscle }; });
-    return map;
-}
+
 
 // GET /api/plans/me
 // GET /api/plans/me
