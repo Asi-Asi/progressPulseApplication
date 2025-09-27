@@ -1,7 +1,6 @@
 // assets/lib/planDraft.js
 import { useEffect, useState } from 'react';
 
-
 const store = {
   days: [],                 // [{ id, name, locked:false, exercises:[{ id, name?, muscle?, sets:number }] }]
   selectedDayId: null,
@@ -43,69 +42,65 @@ export const planDraft = {
   hasLocalChanges() { return !!store.dirty; },
 
   // ---- core helpers ----
-  replaceAllDays(mappedDays) {               // replace entire plan from mapped array
+  replaceAllDays(mappedDays, { locked = store.planLocked } = {}) {
     store.days = Array.isArray(mappedDays) ? mappedDays.map(d => ({
       id: Number(d.id),
       name: d.name ?? `Day ${d.id}`,
       locked: !!d.locked,
       exercises: Array.isArray(d.exercises) ? d.exercises.map(ex => ({
-        id: ex.id,                           // required
-        name: ex.name ?? `#${ex.id}`,        // optional meta
+        id: String(ex.id),                     // force string (ObjectId string)
+        name: ex.name ?? `#${ex.id}`,
         muscle: ex.muscle ?? '',
         sets: Number(ex.sets ?? 1),
       })) : [],
     })) : [];
 
     store.selectedDayId = store.days[0]?.id ?? null;
-    store.planLocked = false;                // server doesn't track lock; keep client lock
+    store.planLocked = !!locked;              // respect server value
     emit();
   },
 
-  hydrateFromServer(serverDays) {
-  const mapped = (serverDays || []).map((d) => {
-    // accept either d.exercises (correct) or legacy d.items
-    const list = Array.isArray(d.items) ? d.items : (d.exercises || []);
-    return {
-      id: Number(d.dayNumber),
-      name:`Day ${d.dayNumber}`,
-      locked: false,
-      exercises: list.map((it) => ({
-        id: String(it.exerciseId),
-        name: it.name ||`#${it.exerciseId}`,
-        muscle: it.muscle ||'',
-        sets: Number(it.sets ?? 1),
-      })),
-    };
-  });
-  this.replaceAllDays(mapped);
-},
+  /**
+   * Accepts either:
+   *  - array of days (legacy)
+   *  - object { days, locked } (new server payload)
+   */
+  hydrateFromServer(payload) {
+    const serverDays = Array.isArray(payload) ? payload : (payload?.days || []);
+    const locked = Array.isArray(payload) ? false : !!payload?.locked;
 
-// --- map local -> server
-toServerPayload() {
-  const days = store.days
-    .map((d, idx) => ({
-      dayNumber: d.id ?? (idx + 1),
-      // send as exercises (not items)
-      exercises: (d.exercises || []).map((ex) => ({
-        exerciseId: ex.id,
-        sets: Number(ex.sets ?? 1),
-      })),
-    }))
-    .filter((d) => d.exercises.length > 0);
-  return { days };
-},
+    const mapped = serverDays.map((d) => {
+      const list = Array.isArray(d.items) ? d.items : (d.exercises || []);
+      return {
+        id: Number(d.dayNumber),
+        name: `Day ${d.dayNumber}`,
+        locked: false, // day-level lock is local-only for now
+        exercises: list.map((it) => ({
+          id: String(it.exerciseId),
+          name: it.name || `#${it.exerciseId}`,
+          muscle: it.muscle || '',
+          sets: Number(it.sets ?? 1),
+        })),
+      };
+    });
 
-  toServerPayload() {                        // map local -> server
+    this.replaceAllDays(mapped, { locked });
+  },
+
+  // --- map local -> server (single, canonical version)
+  toServerPayload() {
     const days = store.days
       .map((d, idx) => ({
         dayNumber: d.id ?? (idx + 1),
-        items: (d.exercises || []).map(ex => ({
-          exerciseId: ex.id,
+        // server expects either "exercises" or "items" — נשמור על "exercises"
+        exercises: (d.exercises || []).map(ex => ({
+          exerciseId: String(ex.id),
           sets: Number(ex.sets ?? 1),
         })),
       }))
-      .filter(d => d.items.length > 0);
-    return { days };
+      .filter(d => d.exercises.length > 0);
+
+    return { days, locked: store.planLocked };
   },
 
   reset() {                                  // optional: clear everything (e.g., on logout)
@@ -159,22 +154,24 @@ toServerPayload() {
     const day = store.days.find(d => d.id === Number(dayId));
     if (!day) return;
     day.locked = true;
-    store.dirty = true; 
+    store.dirty = true;
     emit();
   },
   unlockDay(dayId) {
     const day = store.days.find(d => d.id === Number(dayId));
     if (!day) return;
     day.locked = false;
-    store.dirty = true; 
+    store.dirty = true;
     emit();
   },
   lockPlan() {
     store.planLocked = true;
+    store.dirty = true;
     emit();
   },
   unlockPlan() {
     store.planLocked = false;
+    store.dirty = true;
     emit();
   },
 
@@ -184,9 +181,8 @@ toServerPayload() {
     const day = store.days.find(d => d.id === Number(dayId));
     if (!day || day.locked) return;
 
-    // avoid duplicates by exercise.id
-    const exId = exercise.id;
-    if (exId && day.exercises.some(e => e.id === exId)) return;
+    const exId = String(exercise.id);
+    if (exId && day.exercises.some(e => String(e.id) === exId)) return;
 
     day.exercises.push({
       id: exId,
@@ -194,7 +190,7 @@ toServerPayload() {
       muscle: exercise.muscle ?? '',
       sets: Number(exercise.sets ?? initialSets),
     });
-    store.dirty = true; 
+    store.dirty = true;
     emit();
   },
 
@@ -204,7 +200,7 @@ toServerPayload() {
     if (!day || day.locked || !day.exercises[index]) return;
     const next = Math.max(1, Math.min(20, Number(value) || 1));
     day.exercises[index].sets = next;
-    store.dirty = true; 
+    store.dirty = true;
     emit();
   },
 
@@ -215,7 +211,7 @@ toServerPayload() {
     const cur = Number(day.exercises[index].sets) || 0;
     const next = Math.max(1, Math.min(20, cur + delta));
     day.exercises[index].sets = next;
-    store.dirty = true; 
+    store.dirty = true;
     emit();
   },
 
@@ -224,7 +220,7 @@ toServerPayload() {
     const day = store.days.find(d => d.id === Number(dayId));
     if (!day || day.locked) return;
     day.exercises.splice(index, 1);
-    store.dirty = true; 
+    store.dirty = true;
     emit();
   },
 };
@@ -239,11 +235,11 @@ export function usePlanDraft() {
     dirty: state.dirty,
     actions: {
       createDays: planDraft.createDays,
-      upsertDayCount: planDraft.upsertDayCount,     
-      replaceAllDays: planDraft.replaceAllDays,     
-      hydrateFromServer: planDraft.hydrateFromServer, 
-      toServerPayload: planDraft.toServerPayload,   
-      reset: planDraft.reset,                       
+      upsertDayCount: planDraft.upsertDayCount,
+      replaceAllDays: planDraft.replaceAllDays,
+      hydrateFromServer: planDraft.hydrateFromServer,
+      toServerPayload: planDraft.toServerPayload,
+      reset: planDraft.reset,
       setSelectedDayId: planDraft.setSelectedDayId,
       addExercise: planDraft.addExercise,
       setSets: planDraft.setSets,
@@ -253,9 +249,9 @@ export function usePlanDraft() {
       unlockDay: planDraft.unlockDay,
       lockPlan: planDraft.lockPlan,
       unlockPlan: planDraft.unlockPlan,
-      markDirty: planDraft.markDirty,           
-      markClean: planDraft.markClean,           
-      hasLocalChanges: planDraft.hasLocalChanges, 
+      markDirty: planDraft.markDirty,
+      markClean: planDraft.markClean,
+      hasLocalChanges: planDraft.hasLocalChanges,
     },
   };
 }

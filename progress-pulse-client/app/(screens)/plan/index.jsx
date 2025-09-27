@@ -38,27 +38,30 @@ export default function BuildWorkoutPlanScreen() {
     })();
   }, []);
 
+  // טען תכנית רק כשהטוקן קיים, אין שינויים מקומיים, ועדיין לא נטעןו ימים
   useEffect(() => {
-  if (!accessToken) return;
-  if (dirty) return;
-  if (days && days.length > 0) return;
-  (async () => {
-    try {
-      const res = await getMyPlan({ token: accessToken }); // מצופה: { days: [...] }
-      if (Array.isArray(res?.days)) {
-        actions.hydrateFromServer(res.days); // ימפה ל-{id,name,exercises,locked:false}
+    if (!accessToken) return;
+    if (dirty) return;
+    if (days && days.length > 0) return;
+
+    (async () => {
+      try {
+        const res = await getMyPlan({ token: accessToken }); // מצופה: { planId?, locked?, days:[...] }
+        if (res && Array.isArray(res.days)) {
+          // חשוב: מעבירים את כל האובייקט כדי לקבל locked מהשרת
+          actions.hydrateFromServer(res);
+        }
+      } catch (e) {
+        // 404 = אין תכנית קיימת — מתעלמים. כל שגיאה אחרת מדפיסים.
+        if (e.status !== 404) console.warn('getMyPlan error:', e.message || e);
       }
-    } catch (e) {
-      // 404 = אין תוכנית קיימת — מתעלמים. כל שגיאה אחרת מדפיסים.
-      if (e.status !== 404) console.warn('getMyPlan error:', e.message || e);
-    }
-  })();
-}, [accessToken]);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accessToken]);
 
   const [askDaysVisible, setAskDaysVisible] = useState(false);
   const [daysCountDraft, setDaysCountDraft] = useState('');
 
-  const createDays = (count) => actions.createDays(count);
   const onPressPlus = () => setAskDaysVisible(true);
 
   const selectedDay = useMemo(
@@ -66,8 +69,7 @@ export default function BuildWorkoutPlanScreen() {
     [days, selectedDayId]
   );
 
-  const canFinishPlan =
-    days.length > 0 && days.every((d) => d.exercises.length > 0);
+  const canFinishPlan = days.length > 0 && days.every((d) => d.exercises.length > 0);
 
   const dayLocked = !!selectedDay?.locked;
   const canEditSelectedDay = !!selectedDay && !dayLocked && !planLocked;
@@ -79,20 +81,25 @@ export default function BuildWorkoutPlanScreen() {
 
   async function handleSavePlan() {
     try {
-      const payload = actions.toServerPayload();
-      await saveMyPlan({ token: accessToken, days: payload.days });
+      const payload = actions.toServerPayload(); // אצלך זה מחזיר { days, locked }
+      // ודא שאנו שולחים locked=true בסגירה (Finish Plan).
+      await saveMyPlan({
+        token: accessToken,
+        days: payload.days,
+        locked: true,             // ← זה מה שהשרת צריך כדי לנעול ב-DB
+      });
       actions.markClean();
-      actions.lockPlan();
+      actions.lockPlan();          // נעילה מקומית של ה-UI
       Alert.alert('Saved', 'Your plan was saved successfully');
     } catch (e) {
       console.log('saveMyPlan ERROR:', {
         message: e?.message,
         status: e?.status,
         url: e?.url,
-        payload: e?.payload, // ⇐ זה ה־JSON המלא שהשרת החזיר (כולל פירוט הוולידציה)
+        payload: e?.payload,
       });
       Alert.alert('Error', e?.message || 'Failed to save plan');
-    } 
+    }
   }
 
 
@@ -126,10 +133,7 @@ export default function BuildWorkoutPlanScreen() {
             <View className="flex-row items-center gap-2">
               {!planLocked && canFinishPlan ? (
                 <TouchableOpacity
-                  onPress={async () => {
-                    await handleSavePlan();   // ← קודם שומר לשרת
-                    actions.lockPlan();       // ← ואז נועל מקומית (UI)
-                  }}
+                  onPress={handleSavePlan}
                   className="rounded-xl px-3 py-2 bg-primary"
                 >
                   <Text className="text-onPrimary font-bold">Finish Plan</Text>

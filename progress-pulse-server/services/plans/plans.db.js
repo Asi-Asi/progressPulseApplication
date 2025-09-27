@@ -112,4 +112,4 @@ export async function findPlanViewByUserId(userId) {
     } finally {
         if (client) await client.close();
     }
-}
+}   
