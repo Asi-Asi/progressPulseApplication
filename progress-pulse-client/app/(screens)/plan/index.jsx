@@ -82,6 +82,7 @@ export default function BuildWorkoutPlanScreen() {
       const payload = actions.toServerPayload();
       await saveMyPlan({ token: accessToken, days: payload.days });
       actions.markClean();
+      actions.lockPlan();
       Alert.alert('Saved', 'Your plan was saved successfully');
     } catch (e) {
       console.log('saveMyPlan ERROR:', {

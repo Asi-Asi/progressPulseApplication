@@ -66,21 +66,17 @@ export async function findPlanViewByUserId(userId) {
         client = await MongoClient.connect(CN_STR);
         const db = client.db(DB_NAME);
 
-        // 1) שליפת התוכנית
         const plan = await db.collection(COLLECTION).findOne({ userId: new ObjectId(userId) });
         if (!plan) return null;
 
-        // 2) איסוף מזהי תרגילים (תמיכה גם ב-items וגם ב-exercises)
         const rawIds = (plan.days || [])
         .flatMap(d => (Array.isArray(d.items) ? d.items : (d.exercises || [])))
         .map(it => it?.exerciseId)
         .filter(Boolean)
         .map(x => (typeof x === 'object' && x?._bsontype === 'ObjectId' ? String(x) : String(x)));
 
-        // 3) נרמל/סנן ל־ObjectId תקף כדי למנוע חריגות
         const validIds = Array.from(new Set(rawIds)).filter(id => ObjectId.isValid(id));
 
-        // 4) טען מטא־דאטה של התרגילים במכה אחת
         const metaMap = {};
         if (validIds.length) {
         const rows = await db.collection(EXERCISES)
@@ -90,14 +86,15 @@ export async function findPlanViewByUserId(userId) {
         for (const r of rows) metaMap[String(r._id)] = { name: r.name, muscle: r.muscle };
         }
 
-        // 5) בנה payload עקבי ללקוח
         const payload = {
+        planId: String(plan._id),        // <<< להבא מעולה למסך Tracking
+        locked: !!plan.locked,           // <<< שישתקף ל־UI
         days: (plan.days || []).map(d => {
             const list = Array.isArray(d.items) ? d.items : (d.exercises || []);
             return {
             dayNumber: Number(d.dayNumber ?? d.day ?? 0),
             items: list.map(it => {
-                const idStr = typeof it.exerciseId === 'object' && it.exerciseId?._bsontype === 'ObjectId'
+                const idStr = (typeof it.exerciseId === 'object' && it.exerciseId?._bsontype === 'ObjectId')
                 ? String(it.exerciseId)
                 : String(it.exerciseId || '');
                 return {
@@ -112,9 +109,6 @@ export async function findPlanViewByUserId(userId) {
         };
 
         return payload;
-    } catch (error) {
-        console.error('Error building plan view:', error);
-        throw error;
     } finally {
         if (client) await client.close();
     }

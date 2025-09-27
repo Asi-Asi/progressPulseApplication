@@ -49,8 +49,8 @@ export function getMyPlan({ token }) {
 }
 
 // PUT /api/plans/me  body: { days }
-export function saveMyPlan({ token, days }) {
-  return request('/api/plans/me', { method: 'PUT', token, body: { days } });
+export function saveMyPlan({ token, days, locked }) {
+  return request('/api/plans/me', { method: 'PUT', token, body: { days, locked } });
 }
 
 // DELETE /api/plans/me
