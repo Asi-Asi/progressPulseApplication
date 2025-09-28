@@ -32,15 +32,8 @@ export default function MusclesCategoryScreen() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
-        if (!res.ok) {
-          const text = await res.text().catch(() => '');
-          console.log('stats fetch failed:', res.status, text);
-          if (!cancelled) setCounts({});
-          return;
-        }
-        const data = await res.json();
-        console.log('stats map:', data); // { abs: 7, back: 12, ... }
 
+        const data = await res.json();
         if (!cancelled) setCounts(data || {});
       } catch (e) {
         console.log('stats fetch error', e);
