@@ -28,6 +28,7 @@ function BottomTabs({ role = 20, items, currentHref }) {
     TRACK: "/(screens)/tracking",
     PROFILE: "/(screens)/profile",
     COACH_SUBS: "/(screens)/coach", // if you only have coach/index.jsx use "/(screens)/coach"
+    ADMIN_CONTROLLER: "/(screens)/admin",
   };
 
   // Default tabs per role (edit labels/icons if needed)
@@ -41,19 +42,22 @@ function BottomTabs({ role = 20, items, currentHref }) {
       ];
     }
     // Admin (10) 
-    if (role === 10){
+    else if (role === 10){
       return [
-        { label: "controller",    icon: "server-cog", href: ROUTES.PLAN },
+        { label: "controller",    icon: "account-cog-outline", href: ROUTES.ADMIN_CONTROLLER },
         { label: "Profile", icon: "account",        href: ROUTES.PROFILE },
       ];
     }
 
     //Trainee (20)
-    return [
-        { label: "Plan",    icon: "calendar-check", href: ROUTES.PLAN },
-        { label: "Track",   icon: "dumbbell",       href: ROUTES.TRACK },
-        { label: "Profile", icon: "account",        href: ROUTES.PROFILE },
-      ];
+    else if (role === 20){
+      return [
+          { label: "Plan",    icon: "calendar-check", href: ROUTES.PLAN },
+          { label: "Track",   icon: "dumbbell",       href: ROUTES.TRACK },
+          { label: "Profile", icon: "account",        href: ROUTES.PROFILE },
+        ];
+    }
+    return null;
 
   }, [role]);
 

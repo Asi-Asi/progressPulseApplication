@@ -84,10 +84,11 @@ export default function LoginForm() {
       if (roleLevel === 30) {
         alertFn('Login Successful!', `Welcome, ${greetName}!`);
         router.replace('/(screens)/coach');
+
       } else if (roleLevel === 10) {
         // If 10 is Admin in your project, route accordingly; otherwise remove this branch
-        alertFn('Welcome Admin!', 'Redirecting to admin dashboard…');
-        router.replace('/AdminPage');
+        alertFn(`Welcome, ${greetName}!`, 'Redirecting to admin dashboard…');
+        router.replace('/(screens)/admin');
       } else {
         alertFn('Login Successful!', `Welcome, ${greetName}!`);
         router.replace('/(screens)/plan');

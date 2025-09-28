@@ -1,157 +1,113 @@
-// app/AdminPage.jsx
-import React, { useEffect, useState, useCallback } from "react";
+// app/(screens)/admin/index.jsx
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  Platform,
-  Modal,
-  ScrollView,
-  RefreshControl,
-  Image,
+  View, Text, ScrollView, TextInput, RefreshControl, TouchableOpacity, Alert, Platform,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Stack } from "expo-router";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Stack, useRouter } from "expo-router";
 import AppLogo from "../../../assets/components/ui/AppLogo";
+import { listUsers, adminDeleteUser } from "../../../assets/api/admin.api";
+import UserEditorModal from "../../../assets/components/screens/admin/UserEditorModal";
+import BottomTabs from "../../../assets/components/navigation/BottomTabs";
 
-const API_HOST =
-  process.env.EXPO_PUBLIC_API_BASE ||
-  (Platform.OS === "android"
-    ? "http://10.0.2.2:5500"
-    : Platform.OS === "ios"
-    ? "http://127.0.0.1:5500"
-    : "http://localhost:5500");
+const ROLES = { ADMIN: 10, TRAINEE: 20, COACH: 30 };
+const roleLabel = (n) => (n === ROLES.ADMIN ? "admin" : n === ROLES.COACH ? "coach" : "trainee");
 
-const API = `${API_HOST}/api`;
-const CREATE_ENDPOINT = `${API}/users`;
-
-const safeJson = async (res) => {
-  const ct = res.headers.get("content-type") || "";
-  const len = res.headers.get("content-length");
-  if (res.status === 204 || len === "0" || !ct.includes("application/json")) return null;
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-};
-
-// --- Small helpers ---
-const formatDateEN = (iso) => {
-  const d = new Date(iso);
-  if (isNaN(d)) return "—";
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }).format(d);
-  } catch {
-    const M = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${M[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-  }
-};
-
-// --- A compact user card used in the grid ---
-function AdminUserCard({ user, onEdit, onDelete }) {
-  const initials = String(user.name || user.email || "?")
-    .split(" ")
-    .map((p) => p[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+/* Small badge for role */
+function RoleBadge({ roleLevel }) {
+  const label = roleLabel(roleLevel);
+  const cls =
+    label === "admin"
+      ? "bg-secondary"   // orange for admin
+      : label === "coach"
+      ? "bg-primary"     // blue for coach
+      : "bg-success";    // green for trainee
 
   return (
-    <View className="bg-card rounded-xl border border-border p-4">
-      <View className="flex-row items-start gap-3">
-        {user.avatarUrl ? (
-          <Image source={{ uri: user.avatarUrl }} className="w-12 h-12 rounded-full" />
-        ) : (
-          <View className="w-12 h-12 rounded-full bg-field border border-fieldBorder items-center justify-center">
-            <Text className="text-primary font-extrabold">{initials}</Text>
-          </View>
-        )}
+    <View className={`px-2 py-1 rounded-lg ${cls}`}>
+      <Text className="text-onPrimary text-xs font-bold">{label}</Text>
+    </View>
+  );
+}
 
-        <View className="flex-1">
-          <Text className="text-text font-bold" numberOfLines={1}>
-            {user.name || "—"}
-          </Text>
-          <Text className="text-muted" numberOfLines={1}>
-            {user.email || "—"}
-          </Text>
-
-          <View className="flex-row gap-3 mt-2">
-            {user.createdAt && (
-              <Text className="text-muted text-xs">
-                Since <Text className="text-text font-bold">{formatDateEN(user.createdAt)}</Text>
-              </Text>
-            )}
-            {user.role != null && (
-              <Text className="text-muted text-xs">Role <Text className="text-text font-bold">{user.role}</Text></Text>
-            )}
-          </View>
-        </View>
+/* Single row in the list */
+function UserRow({ item, onEdit, onDelete }) {
+  return (
+    <View className="flex-row items-center justify-between p-4 mb-3 rounded-2xl bg-card border border-border">
+      <View className="flex-1 mr-3">
+        <Text className="text-base font-bold text-text">
+          {(item.firstName || "") + " " + (item.lastName || "")}
+        </Text>
+        <Text className="text-xs text-muted">{item.email}</Text>
+        <Text className="text-xs text-muted mt-1">
+          Gender: {item.gender || "-"} • Created: {item.createdAt || "-"}
+        </Text>
       </View>
 
-      <View className="flex-row gap-2 mt-3">
-        <TouchableOpacity
-          onPress={() => onEdit?.(user)}
-          className="flex-1 h-10 rounded-lg bg-field border border-fieldBorder items-center justify-center"
-        >
-          <Text className="text-text font-bold">Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => onDelete?.(user)}
-          className="w-10 h-10 rounded-lg bg-secondary items-center justify-center"
-        >
-          <MaterialCommunityIcons name="trash-can-outline" size={18} color="#FFFFFF" />
-        </TouchableOpacity>
+      <View className="items-end gap-2">
+        <RoleBadge roleLevel={item.roleLevel} />
+
+        <View className="flex-row gap-2">
+          <TouchableOpacity
+            onPress={() => onEdit(item)}
+            className="px-3 py-2 rounded-xl bg-primary"
+          >
+            <Text className="text-onPrimary font-semibold">Edit</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => onDelete(item)}
+            className="px-3 py-2 rounded-xl bg-error"
+          >
+            <Text className="text-onPrimary font-semibold">Delete</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 }
 
-export default function AdminPage() {
-  const [users, setUsers] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
+export default function AdminUsersScreen() {
+  const router = useRouter();
+  const [all, setAll] = useState([]);              // full list
+  const [query, setQuery] = useState("");          // search
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [editing, setEditing] = useState(null);    // selected user object
+  const [error, setError] = useState("");
 
-  // EDIT state
-  const [editing, setEditing] = useState(null);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  /* Derived filtered list */
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((u) => {
+      const full = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
+      return (
+        full.includes(q) ||
+        String(u.email || "").toLowerCase().includes(q) ||
+        roleLabel(u.roleLevel).includes(q)
+      );
+    });
+  }, [all, query]);
 
-  // CREATE state
-  const [createOpen, setCreateOpen] = useState(false);
-  const [cName, setCName] = useState("");
-  const [cEmail, setCEmail] = useState("");
-  const [cPassword, setCPassword] = useState("");
-  const [creating, setCreating] = useState(false);
-
+  /* Fetch users (admin) */
   const load = useCallback(async () => {
-    setRefreshing(true);
+    setLoading(true);
+    setError("");
     try {
-      const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API}/users`, {
-        headers: { Authorization: token ? `Bearer ${token}` : "" },
-      });
-      const data = await safeJson(res);
+      const users = await listUsers();                  // should be an array
+      const arr = Array.isArray(users) ? users : [];    // guard against null/shape issues
 
-      const list = (Array.isArray(data) ? data : data?.users || []).map((u) => ({
+      // Normalize id for rendering/keys
+      const normalized = arr.map((u) => ({
+        id: String(u._id || u.id || ""),
         ...u,
-        _id: String(u._id ?? u.id ?? ""),
       }));
-
-      if (res.ok) setUsers(list);
-      else Alert.alert("Error", data?.message || "Failed to fetch users");
+      setAll(normalized);
     } catch (e) {
-      console.error(e);
-      Alert.alert("Error", "Unable to reach server.");
+      setError(e?.message || "Failed to load users");
+      setAll([]);
     } finally {
-      setRefreshing(false);
+      setLoading(false);
     }
   }, []);
 
@@ -159,133 +115,46 @@ export default function AdminPage() {
     load();
   }, [load]);
 
-  const startEdit = (u) => {
-    setEditing(u);
-    setName(u.name || "");
-    setEmail(u.email || "");
-  };
-
-  const saveEdit = async () => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Alert.alert("Invalid email", "Please enter a valid email.");
-      return;
-    }
-    setLoading(true);
+  /* Pull-to-refresh */
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API}/users/${editing._id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({ name, email }),
-      });
-      const data = await safeJson(res);
-      if (!res.ok) {
-        Alert.alert("Update failed", data?.message || "Try again.");
-      } else {
-        setUsers((prev) => prev.map((u) => (u._id === editing._id ? { ...u, name, email } : u)));
-        setEditing(null);
-      }
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Error", "Unable to update user.");
+      await load();
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, [load]);
 
-  const deleteUser = async (u) => {
-    const userId = String(u?._id ?? u?.id ?? "");
-    if (!userId) {
-      Alert.alert("Cannot delete", "User id is missing.");
-      console.warn("Delete clicked with missing id:", u);
-      return;
-    }
+  /* Cross-platform confirm dialog */
+  function confirmDelete(title, message) {
+    return new Promise((resolve) => {
+      if (Platform.OS === "web") {
+        const ok = window.confirm(`${title}\n\n${message}`);
+        return resolve(ok);
+      }
+      Alert.alert(title, message, [
+        { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+        { text: "Delete", style: "destructive", onPress: () => resolve(true) },
+      ]);
+    });
+  }
 
-    Alert.alert("Delete user", `Delete ${u.email || u.name || userId}?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API}/users/${encodeURIComponent(userId)}`, {
-              method: "DELETE",
-              headers: { Authorization: token ? `Bearer ${token}` : "" },
-            });
-            if (res.ok) {
-              setUsers((prev) => prev.filter((x) => String(x._id ?? x.id) !== userId));
-              return;
-            }
-            const data = await safeJson(res);
-            Alert.alert("Delete failed", data?.message || `Status ${res.status}`);
-          } catch (e) {
-            console.error(e);
-            Alert.alert("Error", "Unable to delete user.");
-          }
-        },
-      },
-    ]);
-  };
+  /* Delete handler */
+  const handleDelete = useCallback(async (user) => {
+    const ok = await confirmDelete(
+      "Delete user?",
+      `This will permanently remove ${user?.email || "this user"}.`
+    );
+    if (!ok) return;
 
-  // CREATE
-  const openCreate = () => {
-    setCName("");
-    setCEmail("");
-    setCPassword("");
-    setCreateOpen(true);
-  };
-
-  const saveCreate = async () => {
-    if (!cName.trim()) {
-      Alert.alert("Missing name", "Please enter a name.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cEmail)) {
-      Alert.alert("Invalid email", "Please enter a valid email.");
-      return;
-    }
-    if ((cPassword || "").length < 6) {
-      Alert.alert("Weak password", "Password must be at least 6 characters.");
-      return;
-    }
-
-    setCreating(true);
     try {
-      const token = await AsyncStorage.getItem("token");
-      const res = await fetch(CREATE_ENDPOINT, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-        body: JSON.stringify({
-          name: cName.trim(),
-          email: cEmail.trim().toLowerCase(),
-          password: cPassword,
-        }),
-      });
-
-      const data = await safeJson(res);
-
-      if (res.status === 201 || res.status === 200) {
-        setCreateOpen(false);
-        await load();
-      } else if (res.status === 409) {
-        Alert.alert("Email already exists", "Try a different email.");
-      } else {
-        Alert.alert("Create failed", data?.message || `Status ${res.status}`);
-      }
+      await adminDeleteUser(String(user.id));
+      // Optimistic update
+      setAll((prev) => prev.filter((u) => String(u.id) !== String(user.id)));
     } catch (e) {
-      console.error(e);
-      Alert.alert("Error", "Unable to create user.");
-    } finally {
-      setCreating(false);
+      Alert.alert("Delete failed", e?.message || "Unexpected error");
     }
-  };
+  }, []);
 
   return (
     <View className="flex-1 bg-bg">
@@ -293,157 +162,55 @@ export default function AdminPage() {
         options={{
           headerTitle: () => <AppLogo />,
           headerTitleAlign: "left",
-          headerStyle: { backgroundColor: "#FDFBFA" }, // bg
+          headerStyle: { backgroundColor: "#FDFBFA" }, // bg color from your palette
         }}
       />
 
-      {/* Page title */}
-      <View className="px-4 pt-5">
-        <Text className="text-text text-2xl font-extrabold">Admin</Text>
-        <Text className="text-muted mt-1">Manage users in your workspace.</Text>
+      {/* Search */}
+      <View className="p-4">
+        <Text className="text-2xl font-extrabold mb-2 text-text">Admin • Users</Text>
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search by name, email, or role"
+          placeholderTextColor="#667085" // fieldMuted
+          className="w-full px-4 py-3 rounded-xl bg-field border border-fieldBorder text-text"
+        />
+        {!!error && <Text className="text-error mt-2">{error}</Text>}
       </View>
 
-      {/* Grid of users */}
+      {/* List */}
       <ScrollView
-        className="flex-1 px-4"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={load} tintColor="#007BFF" />
-        }
+        className="px-4"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {users.length === 0 ? (
-          <Text className="text-muted text-center mt-10">No users yet.</Text>
+        {loading ? (
+          <Text className="text-center text-muted">Loading…</Text>
+        ) : filtered.length === 0 ? (
+          <Text className="text-center text-muted">No users found</Text>
         ) : (
-          <View className="py-4">
-            <View className="flex-row flex-wrap -mx-1.5">
-              {users.map((item) => (
-                <View key={item._id} className="w-1/2 px-1.5 mb-3">
-                  <AdminUserCard user={item} onEdit={startEdit} onDelete={deleteUser} />
-                </View>
-              ))}
-            </View>
-          </View>
+          filtered.map((u) => (
+            <UserRow
+              key={u.id}
+              item={u}
+              onEdit={setEditing}
+              onDelete={handleDelete}   // ✅ pass the delete handler
+            />
+          ))
         )}
-        <View className="h-16" />
       </ScrollView>
 
-      {/* Floating create button */}
-      <TouchableOpacity
-        onPress={openCreate}
-        activeOpacity={0.9}
-        className="absolute right-5 bottom-6 w-14 h-14 rounded-full bg-secondary items-center justify-center shadow"
-      >
-        <Text className="text-white text-2xl font-extrabold -mt-0.5">＋</Text>
-      </TouchableOpacity>
-
-      {/* Edit modal */}
-      <Modal
+      {/* Editor modal */}
+      <UserEditorModal
         visible={!!editing}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setEditing(null)}
-      >
-        <View className="flex-1 bg-black/60 items-center justify-center px-5">
-          <View className="w-full max-w-[560px] bg-card rounded-2xl border border-border p-4">
-            <Text className="text-primary font-extrabold text-lg mb-3">Edit User</Text>
+        user={editing}
+        onClose={() => setEditing(null)}
+        onSaved={load} // refresh after save
+      />
 
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Name"
-              placeholderTextColor="#667085"
-              className="bg-field border border-fieldBorder text-text rounded-xl px-3 h-11 mb-2"
-            />
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="Email"
-              placeholderTextColor="#667085"
-              className="bg-field border border-fieldBorder text-text rounded-xl px-3 h-11"
-            />
-
-            <View className="flex-row gap-2 mt-4">
-              <TouchableOpacity
-                onPress={() => setEditing(null)}
-                className="flex-1 h-11 rounded-lg bg-field border border-fieldBorder items-center justify-center"
-              >
-                <Text className="text-text font-bold">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={saveEdit}
-                disabled={loading}
-                className={`flex-1 h-11 rounded-lg items-center justify-center ${
-                  loading ? "opacity-60 bg-primary" : "bg-primary"
-                }`}
-              >
-                <Text className="text-onPrimary font-extrabold">
-                  {loading ? "Saving…" : "Save"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Create modal */}
-      <Modal
-        visible={createOpen}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setCreateOpen(false)}
-      >
-        <View className="flex-1 bg-black/60 items-center justify-center px-5">
-          <View className="w-full max-w-[560px] bg-card rounded-2xl border border-border p-4">
-            <Text className="text-primary font-extrabold text-lg mb-3">Create User</Text>
-
-            <TextInput
-              value={cName}
-              onChangeText={setCName}
-              placeholder="Name"
-              placeholderTextColor="#667085"
-              className="bg-field border border-fieldBorder text-text rounded-xl px-3 h-11 mb-2"
-            />
-            <TextInput
-              value={cEmail}
-              onChangeText={setCEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="Email"
-              placeholderTextColor="#667085"
-              className="bg-field border border-fieldBorder text-text rounded-xl px-3 h-11 mb-2"
-            />
-            <TextInput
-              value={cPassword}
-              onChangeText={setCPassword}
-              secureTextEntry
-              placeholder="Password"
-              placeholderTextColor="#667085"
-              className="bg-field border border-fieldBorder text-text rounded-xl px-3 h-11"
-            />
-
-            <View className="flex-row gap-2 mt-4">
-              <TouchableOpacity
-                onPress={() => setCreateOpen(false)}
-                className="flex-1 h-11 rounded-lg bg-field border border-fieldBorder items-center justify-center"
-              >
-                <Text className="text-text font-bold">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={saveCreate}
-                disabled={creating}
-                className={`flex-1 h-11 rounded-lg items-center justify-center ${
-                  creating ? "opacity-60 bg-primary" : "bg-primary"
-                }`}
-              >
-                <Text className="text-onPrimary font-extrabold">
-                  {creating ? "Creating…" : "Create"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Keep tabs consistent across app; pass admin role to highlight correct tab if needed */}
+      <BottomTabs role={ROLES.ADMIN} currentHref="/(screens)/admin" />
     </View>
   );
 }
