@@ -37,7 +37,6 @@ export default function UserInfoSection({
     email,
     onSave,
     saving,
-    onOpenHistory,
 }) {
     const displayName = useMemo(() => {
         const fn = (firstName || "").trim();
@@ -48,76 +47,69 @@ export default function UserInfoSection({
 
     return (
         <View className="mt-4 bg-card rounded-xl border border-border p-4">
-        <View className="flex-row items-center gap-3">
-            <Avatar displayName={displayName} avatarUrl={user?.avatarUrl} />
-            <View className="flex-1">
-            <Text className="text-text font-bold text-lg">{displayName}</Text>
-            <Text className="text-muted">{email || user?.email}</Text>
-            </View>
-            <View className="px-3 py-1 rounded-full bg-primary/90">
-            <Text className="text-onPrimary font-extrabold text-xs">
-                {roleLabel(roleLevel)}
-            </Text>
-            </View>
-        </View>
-
-        <View className="mt-4">
-            <Field label="First name">
-            <TextInput
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="First name"
-                placeholderTextColor="#667085"
-                autoCorrect={false}
-                className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-11"
-            />
-            </Field>
-
-            <Field label="Last name">
-            <TextInput
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder="Last name"
-                placeholderTextColor="#667085"
-                autoCorrect={false}
-                className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-11"
-            />
-            </Field>
-
-            {/* Email (read-only) */}
-            <Field label="Email (read-only)">
-            <TextInput
-                value={email}
-                editable={false}
-                selectTextOnFocus={false}
-                placeholder="you@example.com"
-                placeholderTextColor="#667085"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-11 opacity-70"
-            />
-            </Field>
-
-            <View className="flex-row gap-2 mt-4">
-            <TouchableOpacity
-                onPress={onSave}
-                disabled={saving}
-                className="px-4 h-11 rounded-lg bg-primary items-center justify-center"
-            >
-                <Text className="text-onPrimary font-extrabold">
-                {saving ? "Saving…" : "Save changes"}
+            <View className="flex-row items-center gap-3">
+                <Avatar displayName={displayName} avatarUrl={user?.avatarUrl} />
+                <View className="flex-1">
+                <Text className="text-text font-bold text-lg">{displayName}</Text>
+                <Text className="text-muted">{email || user?.email}</Text>
+                </View>
+                <View className="px-3 py-1 rounded-full bg-primary/90">
+                <Text className="text-onPrimary font-extrabold text-xs">
+                    {roleLabel(roleLevel)}
                 </Text>
-            </TouchableOpacity>
+                </View>
+            </View>
 
-            <TouchableOpacity
-                onPress={onOpenHistory}
-                className="px-4 h-11 rounded-lg bg-field border border-fieldBorder items-center justify-center"
-            >
-                <Text className="text-text font-bold">Training history</Text>
-            </TouchableOpacity>
+            <View className="mt-4">
+                <Field label="First name">
+                    <TextInput
+                        value={firstName}
+                        onChangeText={setFirstName}
+                        placeholder="First name"
+                        placeholderTextColor="#667085"
+                        autoCorrect={false}
+                        className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-11"
+                    />
+                </Field>
+
+                <Field label="Last name">
+                    <TextInput
+                        value={lastName}
+                        onChangeText={setLastName}
+                        placeholder="Last name"
+                        placeholderTextColor="#667085"
+                        autoCorrect={false}
+                        className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-11"
+                    />
+                </Field>
+
+                {/* Email (read-only) */}
+                <Field label="Email (read-only)">
+                    <TextInput
+                        value={email}
+                        editable={false}
+                        selectTextOnFocus={false}
+                        placeholder="you@example.com"
+                        placeholderTextColor="#667085"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        className="bg-field border border-fieldBorder text-text rounded-lg px-3 h-11 opacity-70"
+                    />
+                </Field>
+
+                <View className="flex-row gap-2 mt-4">
+                    <TouchableOpacity
+                        onPress={onSave}
+                        disabled={saving}
+                        className="px-4 h-11 rounded-lg bg-primary items-center justify-center"
+                    >
+                        <Text className="text-onPrimary font-extrabold">
+                        {saving ? "Saving…" : "Save changes"}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
-    </View>
 );
 }

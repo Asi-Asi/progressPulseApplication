@@ -337,3 +337,47 @@ export async function getTraineeWorkoutController(req, res) {
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
+
+
+
+
+
+/* =========================================================
+ * helper: enrich link items with user fields
+ * ======================================================= */
+async function enrichWithTrainee(usersIds, items) {
+  // unique, valid ObjectIds only
+    const ids = Array.from(new Set(
+        usersIds.filter(id => ObjectId.isValid(String(id))).map(id => new ObjectId(String(id)))
+    ));
+    if (!ids.length) return items;
+
+    let client;
+    try {
+        client = await MongoClient.connect(process.env.CONNECTION_STRING);
+        const db = client.db(process.env.DB_NAME);
+        const users = await db.collection('Users')
+        .find({ _id: { $in: ids } })
+        .project({ firstName: 1, lastName: 1, email: 1, avatarUrl: 1 })
+        .toArray();
+
+        const byId = new Map(users.map(u => [String(u._id), u]));
+
+        return items.map(l => {
+        const u = byId.get(String(l.traineeId));
+        if (!u) return l;
+
+        const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+        return {
+            ...l,
+            traineeEmail: u.email ?? l.traineeEmail,
+            traineeFirstName: u.firstName ?? l.traineeFirstName,
+            traineeLastName:  u.lastName  ?? l.traineeLastName,
+            traineeName: name || l.traineeName,
+            traineeAvatarUrl: u.avatarUrl ?? l.traineeAvatarUrl,
+        };
+        });
+    } finally {
+        if (client) await client.close();
+    }
+}

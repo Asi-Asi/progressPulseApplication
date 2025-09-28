@@ -54,11 +54,12 @@ export default function ProfileScreen() {
   const router = useRouter();
 
   const [user, setUser] = useState(null); // from /api/users/me
+  
   const roleLevel = user?.roleLevel ?? ROLES.TRAINEE;
   const isCoach = roleLevel === ROLES.COACH;
 
-  // profile fields
-  const [firstName, setFirstName] = useState("");
+  // profile fields         
+  const [firstName, setFirstName] = useState("");           
   const [lastName,  setLastName]  = useState("");
   const [email,     setEmail]     = useState("");
 

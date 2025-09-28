@@ -134,11 +134,53 @@ export async function findPendingRequestsByCoach(coachId, { limit = 50, skip = 0
     try {
         client = await MongoClient.connect(process.env.CONNECTION_STRING);
         const db = client.db(process.env.DB_NAME);
-        return await db.collection(COLL)
-        .find({ coachId: String(coachId), status: LinkStatus.PENDING })
-        .skip(Number(skip)).limit(Number(limit))
-        .sort({ createdAt: 1 })
-        .toArray();
+        const items = await db.collection(COLL).aggregate([
+        { $match: { coachId: String(coachId), status: LinkStatus.PENDING } },
+        { $sort: { createdAt: 1 } },
+        { $skip: Number(skip) },
+        { $limit: Number(limit) },
+
+        // convert string traineeId -> ObjectId for the lookup
+        { $addFields: {
+            traineeObjId: {
+                $convert: { input: "$traineeId", to: "objectId", onError: null, onNull: null }
+            }
+        }},
+
+        // join Users
+        {
+            $lookup: {
+            from: USERS,
+            localField: "traineeObjId",
+            foreignField: "_id",
+            as: "trainee"
+            }
+        },
+        { $unwind: { path: "$trainee", preserveNullAndEmptyArrays: true } },
+
+        // surface name/email/avatar on the link
+        {
+            $addFields: {
+            traineeFirstName: "$trainee.firstName",
+            traineeLastName:  "$trainee.lastName",
+            traineeEmail:     "$trainee.email",
+            traineeAvatarUrl: "$trainee.avatarUrl",
+            traineeName: {
+                $trim: {
+                input: { $concat: [
+                    { $ifNull: ["$trainee.firstName", ""] }, " ",
+                    { $ifNull: ["$trainee.lastName",  ""] }
+                ]}
+                }
+            }
+            }
+        },
+
+        // don’t return helper fields
+        { $project: { trainee: 0, traineeObjId: 0 } }
+        ]).toArray();
+
+        return items;
     } finally {
         if (client) await client.close();
     }
@@ -149,11 +191,49 @@ export async function findSubscribersByCoach(coachId, { limit = 50, skip = 0 } =
     try {
         client = await MongoClient.connect(process.env.CONNECTION_STRING);
         const db = client.db(process.env.DB_NAME);
-        return await db.collection(COLL)
-        .find({ coachId: String(coachId), status: LinkStatus.APPROVED })
-        .skip(Number(skip)).limit(Number(limit))
-        .sort({ updatedAt: -1 })
-        .toArray();
+        const items = await db.collection(COLL).aggregate([
+        { $match: { coachId: String(coachId), status: LinkStatus.APPROVED } },
+        { $sort: { updatedAt: -1 } },
+        { $skip: Number(skip) },
+        { $limit: Number(limit) },
+
+        { $addFields: {
+            traineeObjId: {
+                $convert: { input: "$traineeId", to: "objectId", onError: null, onNull: null }
+            }
+        }},
+
+        {
+            $lookup: {
+            from: USERS,
+            localField: "traineeObjId",
+            foreignField: "_id",
+            as: "trainee"
+            }
+        },
+        { $unwind: { path: "$trainee", preserveNullAndEmptyArrays: true } },
+
+        {
+            $addFields: {
+            traineeFirstName: "$trainee.firstName",
+            traineeLastName:  "$trainee.lastName",
+            traineeEmail:     "$trainee.email",
+            traineeAvatarUrl: "$trainee.avatarUrl",
+            traineeName: {
+                $trim: {
+                input: { $concat: [
+                    { $ifNull: ["$trainee.firstName", ""] }, " ",
+                    { $ifNull: ["$trainee.lastName",  ""] }
+                ]}
+                }
+            }
+            }
+        },
+
+        { $project: { trainee: 0, traineeObjId: 0 } }
+        ]).toArray();
+
+        return items;
     } finally {
         if (client) await client.close();
     }

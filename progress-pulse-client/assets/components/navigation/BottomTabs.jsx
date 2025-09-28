@@ -27,11 +27,12 @@ function BottomTabs({ role = 20, items, currentHref }) {
     PLAN: "/(screens)/plan",
     TRACK: "/(screens)/tracking",
     PROFILE: "/(screens)/profile",
-    COACH_SUBS: "/(screens)/coach/subscribers", // if you only have coach/index.jsx use "/(screens)/coach"
+    COACH_SUBS: "/(screens)/coach", // if you only have coach/index.jsx use "/(screens)/coach"
   };
 
   // Default tabs per role (edit labels/icons if needed)
   const defaultItems = useMemo(() => {
+
     if (role === 30) {
       // Coach
       return [
@@ -39,12 +40,21 @@ function BottomTabs({ role = 20, items, currentHref }) {
         { label: "Profile",     icon: "account",       href: ROUTES.PROFILE },
       ];
     }
-    // Admin (10) & Trainee (20)
+    // Admin (10) 
+    if (role === 10){
+      return [
+        { label: "controller",    icon: "server-cog", href: ROUTES.PLAN },
+        { label: "Profile", icon: "account",        href: ROUTES.PROFILE },
+      ];
+    }
+
+    //Trainee (20)
     return [
-      { label: "Plan",    icon: "calendar-check", href: ROUTES.PLAN },
-      { label: "Track",   icon: "dumbbell",       href: ROUTES.TRACK },
-      { label: "Profile", icon: "account",        href: ROUTES.PROFILE },
-    ];
+        { label: "Plan",    icon: "calendar-check", href: ROUTES.PLAN },
+        { label: "Track",   icon: "dumbbell",       href: ROUTES.TRACK },
+        { label: "Profile", icon: "account",        href: ROUTES.PROFILE },
+      ];
+
   }, [role]);
 
   const tabs = items?.length ? items : defaultItems;
@@ -53,16 +63,25 @@ function BottomTabs({ role = 20, items, currentHref }) {
   const activePath = currentHref || pathname || "";
 
   return (
-    <SafeAreaView
+    <View
       pointerEvents="box-none"
-      style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}
+      // Full-bleed, stuck to bottom (no SafeAreaView)
+      style={{
+        position: Platform.OS === "web" ? "fixed" : "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 100,
+        elevation: 10,
+      }}
     >
       <View
-        className="mx-4 mb-4 rounded-2xl bg-card border border-border"
+        // Flush bar: no margins/radius; only top divider
+        className="bg-card border-t border-border"
         style={{
-          paddingBottom: Platform.OS === "android" ? 8 : 6,
-          paddingTop: 6,
-          marginBottom: Math.max(12, insets.bottom ? 0 : 12),
+          paddingBottom: Platform.OS === "android" ? 11 : 15,
+          paddingTop: 8,
+          
         }}
       >
         <View className="flex-row items-stretch justify-around">
@@ -108,7 +127,7 @@ function BottomTabs({ role = 20, items, currentHref }) {
           })}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
