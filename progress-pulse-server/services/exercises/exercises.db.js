@@ -105,7 +105,7 @@ export async function countExercisesByMuscle() {
   try {
     client = await MongoClient.connect(CN_STR);
     const db  = client.db(DB_NAME);
-    const col = db.collection('COLLECTION');
+    const col = db.collection(COLLECTION);
 
     const rows = await col.aggregate([
       { $group: { _id: '$muscle', count: { $sum: 1 } } }

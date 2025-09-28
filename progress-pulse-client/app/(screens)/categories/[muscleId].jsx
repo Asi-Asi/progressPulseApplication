@@ -55,7 +55,7 @@ export default function ExercisesByMusclePicker() {
   // load token once
   useEffect(() => {
     (async () => {
-      const t = await AsyncStorage.getItem('token');
+      const t = await AsyncStorage.getItem('accessToken');
       setToken(t || '');
     })();
   }, []);

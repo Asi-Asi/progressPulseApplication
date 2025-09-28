@@ -32,7 +32,15 @@ export default function MusclesCategoryScreen() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          console.log('stats fetch failed:', res.status, text);
+          if (!cancelled) setCounts({});
+          return;
+        }
         const data = await res.json();
+        console.log('stats map:', data); // { abs: 7, back: 12, ... }
+
         if (!cancelled) setCounts(data || {});
       } catch (e) {
         console.log('stats fetch error', e);
@@ -48,8 +56,15 @@ export default function MusclesCategoryScreen() {
     const q = query.trim().toLowerCase();
     let list = MUSCLES.filter(m => m.name.toLowerCase().includes(q));
     if (sortBy === 'alpha') list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+
+    // Build a safe key for this muscle and look up the count from the map
+    const getKey = (m) => String(m.id || m.name).trim().toLowerCase();
+
     // inject count from stats map (MUSCLES[i].id is your slug: 'abs','back',...)
-    return list.map(m => ({ ...m, count: counts[m.id] ?? 0 }));
+    return list.map(m => {
+      const key = getKey(m);
+      return { ...m, count: counts[key] ?? 0 };
+    });
   }, [query, sortBy, counts]);
 
   const handlePress = (muscle) => {

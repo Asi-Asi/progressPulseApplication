@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MuscleIcon from '../../icons/MuscleIcon';
 
 function MuscleCardBase({ item, onPress, count = 0 }) {
+  const displayCount = (item.exerciseCount ?? count) ?? 0;
   return (
     <TouchableOpacity
       className="flex-1 rounded-2xl p-3 bg-card border border-border"
@@ -27,7 +28,9 @@ function MuscleCardBase({ item, onPress, count = 0 }) {
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-field border border-fieldBorder">
           <MaterialCommunityIcons name="dumbbell" size={14} color="#007BFF" />
-          <Text className="text-text text-xs font-bold">{item.exerciseCount ?? {count}}</Text>
+          <Text className="text-text text-xs font-bold">
+            {typeof count === 'number' ? count : '–'}
+          </Text>
         </View>
 
         <View className="px-3 py-1.5 rounded-full bg-primary">
