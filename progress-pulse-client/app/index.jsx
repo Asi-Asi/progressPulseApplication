@@ -5,7 +5,6 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Dimensions,
   StatusBar,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -13,9 +12,6 @@ import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AppLogo from "../assets/components/ui/AppLogo";
 
-const { width, height } = Dimensions.get("window");
-
-// bump this to force everyone to see onboarding again after an update
 const ONBOARDING_KEY = "onboardingSeen_v2";
 
 const SLIDES = [
@@ -47,7 +43,10 @@ export default function OnboardingIndex() {
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems?.length > 0) setIndex(viewableItems[0].index ?? 0);
   }).current;
-  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+
+  const viewabilityConfig = useRef({
+    viewAreaCoveragePercentThreshold: 50,
+  }).current;
 
   const finish = useCallback(async () => {
     try { await AsyncStorage.setItem(ONBOARDING_KEY, "1"); } catch {}
@@ -62,7 +61,8 @@ export default function OnboardingIndex() {
     }
   };
 
-  if (checking) return <View style={{ flex: 1, backgroundColor: "#FDFBFA" }} />;
+  // loading placeholder (keeps your light header color)
+  if (checking) return <View className="flex-1 bg-[#FDFBFA]" />;
 
   return (
     <View className="flex-1 bg-bg">
@@ -70,7 +70,7 @@ export default function OnboardingIndex() {
       <Stack.Screen
         options={{
           headerTitle: () => <AppLogo />,
-          headerStyle: { backgroundColor: "#FDFBFA" },
+          headerStyle: { backgroundColor: "#FDFBFA" }, // Stack options can’t use className
           headerTitleAlign: "left",
           headerShadowVisible: false,
         }}
@@ -86,44 +86,40 @@ export default function OnboardingIndex() {
         </TouchableOpacity>
       </View>
 
-      {/* Slides (centered vertically) */}
-      <FlatList
-        ref={listRef}
-        data={SLIDES}
-        keyExtractor={(item) => item.key}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        renderItem={({ item }) => (
-          <View
-            style={{
-              width,
-              // Center roughly in the middle while leaving room for dots + CTA
-              height: height * 0.76,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingHorizontal: 24,
-            }}
-          >
-            <View className="items-center justify-center">
-              <View className="w-28 h-28 rounded-3xl bg-primary/10 items-center justify-center">
-                <MaterialCommunityIcons name={item.icon} size={54} color="#007BFF" />
+      {/* Slides */}
+      <View className="flex-1">
+        <FlatList
+          ref={listRef}
+          data={SLIDES}
+          keyExtractor={(item) => item.key}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          renderItem={({ item }) => (
+            <View className="w-screen flex-1 items-center justify-center px-6">
+              {/* Icon bubble */}
+              <View className="items-center justify-center">
+                <View className="w-28 h-28 rounded-3xl bg-primary/10 items-center justify-center">
+                  {/* Icons don’t read NativeWind colors; keep the explicit color */}
+                  <MaterialCommunityIcons name={item.icon} size={54} color="#007BFF" />
+                </View>
+              </View>
+
+              {/* Title + subtitle */}
+              <View className="mt-8 items-center">
+                <Text className="text-text text-3xl font-extrabold text-center">
+                  {item.title}
+                </Text>
+                <Text className="text-muted mt-2 text-center leading-6">
+                  {item.subtitle}
+                </Text>
               </View>
             </View>
-
-            <View className="mt-8 items-center">
-              <Text className="text-text text-3xl font-extrabold text-center">
-                {item.title}
-              </Text>
-              <Text className="text-muted mt-2 text-center leading-6">
-                {item.subtitle}
-              </Text>
-            </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      </View>
 
       {/* Dots + CTA */}
       <View className="px-6 pb-6">
@@ -134,7 +130,7 @@ export default function OnboardingIndex() {
               <View
                 key={i}
                 className={`h-2 rounded-full ${active ? "bg-primary" : "bg-field"}`}
-                style={{ width: active ? 28 : 8 }}
+                style={{ width: active ? 28 : 8 }} // dynamic width kept for active state
               />
             );
           })}

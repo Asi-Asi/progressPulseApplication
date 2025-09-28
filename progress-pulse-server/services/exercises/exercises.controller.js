@@ -1,4 +1,4 @@
-  import { insertExercise ,findExercises, findExerciseById, deleteExerciseById,isExerciseInUse  } from './exercises.db.js';
+  import { insertExercise ,findExercises, findExerciseById, deleteExerciseById,isExerciseInUse, countExercisesByMuscle  } from './exercises.db.js';
   import { validateListQuery, normalizeNameRegex, isValidObjectIdString, validateExerciseDoc, MUSCLE_LABEL_BY_SLUG } from './exercises.model.js';
 
   // GET /api/exercises
@@ -86,3 +86,15 @@
       return res.status(500).json({ message: 'Server error' });
     }
   }
+
+
+  // GET /api/exercises/stats
+export async function getExerciseStats(req, res) {
+  try {
+    const map = await countExercisesByMuscle();
+    return res.json(map); // { abs: 7, back: 12, ... }
+  } catch (err) {
+    console.error('getExerciseStats error:', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+}

@@ -4,7 +4,7 @@ import { TouchableOpacity, View, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MuscleIcon from '../../icons/MuscleIcon';
 
-function MuscleCardBase({ item, onPress }) {
+function MuscleCardBase({ item, onPress, count = 0 }) {
   return (
     <TouchableOpacity
       className="flex-1 rounded-2xl p-3 bg-card border border-border"
@@ -27,7 +27,7 @@ function MuscleCardBase({ item, onPress }) {
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-field border border-fieldBorder">
           <MaterialCommunityIcons name="dumbbell" size={14} color="#007BFF" />
-          <Text className="text-text text-xs font-bold">{item.exerciseCount ?? 12}</Text>
+          <Text className="text-text text-xs font-bold">{item.exerciseCount ?? {count}}</Text>
         </View>
 
         <View className="px-3 py-1.5 rounded-full bg-primary">

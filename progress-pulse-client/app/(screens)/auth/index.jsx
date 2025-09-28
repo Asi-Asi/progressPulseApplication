@@ -35,26 +35,6 @@ export default function Login() {
 
         <LoginFooter/>
 
-        <TouchableOpacity onPress={() => router.push('/plan')}>
-          <Text>Go to Plan</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push('/tracking')}>
-          <Text>Go to Tracking</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push('/tracking/trainingHistory')}>
-          <Text>Go to Training History</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push('/coach')}>
-          <Text>Go to Coach</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push('/profile')}>
-          <Text>Go to Profile</Text>
-        </TouchableOpacity>
-
       </View>
     </ScrollView>
   );

@@ -98,3 +98,24 @@ export async function deleteExerciseById(id) {
     if (client) await client.close();
   }
 }
+
+
+export async function countExercisesByMuscle() {
+  let client;
+  try {
+    client = await MongoClient.connect(CN_STR);
+    const db  = client.db(DB_NAME);
+    const col = db.collection('COLLECTION');
+
+    const rows = await col.aggregate([
+      { $group: { _id: '$muscle', count: { $sum: 1 } } }
+    ]).toArray();
+
+    // Return { "abs": 7, "back": 12, ... } using a slug for the key
+    // If your DB stores labels like "Abs", "Back", normalize to slug:
+    const toSlug = s => String(s).trim().toLowerCase(); // simple slugger
+    return Object.fromEntries(rows.map(r => [toSlug(r._id), r.count]));
+  } finally {
+    if (client) await client.close();
+  }
+}
