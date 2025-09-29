@@ -1,112 +1,123 @@
 // app/(screens)/tracking/index.jsx
-import React, { useMemo, useState, useEffect } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { View, Text, ScrollView, Alert, Platform, TouchableOpacity } from "react-native";
+import React, { useMemo, useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import AppLogo from "../../../assets/components/ui/AppLogo";
 import BookIcon from "../../../assets/images/svg/book.svg";
 import BottomTabs from "../../../assets/components/navigation/BottomTabs";
 
-// Components
 import DayPicker from "../../../assets/components/screens/tracking/DayPicker";
-import SummaryTable from "../../../assets/components/screens/tracking/SummaryTable";
-import AddExerciseTable from "../../../assets/components/screens/tracking/AddExerciseTable";
-import ExercisePickerModal from "../../../assets/components/screens/tracking/ExercisePickerModal";
-import FinishWorkoutButton from "../../../assets/components/screens/tracking/FinishWorkoutButton";
 
-// (visual fallback only)
+import SummaryTable from "../../../assets/components/screens/tracking/SummaryTable";
+
+import LogTable from "../../../assets/components/screens/tracking/LogTable";
+
+import ExercisePickerModal from "../../../assets/components/screens/tracking/ExercisePickerModal";
+
+import FinishButton from "../../../assets/components/screens/tracking/FinishButton";
+
+import { getLastMaxFromLog, safeAlert } from "../../../assets/utils/tracking";
+
+/* === sample data — replace with your real plan === */
 const samplePlan = {
   id: "P-001",
   days: [
-    { id: "1", name: "Day 1 - Push", exercises: [] },
-    { id: "2", name: "Day 2 - Pull", exercises: [] },
-    { id: "3", name: "Day 3 - Legs", exercises: [] },
+    { id: "day1", name: "Day 1 - Push", exercises: [
+      { id: "bench", name: "Barbell Bench Press", sets: 4, lastMaxKg: 90 },
+      { id: "ohp", name: "Overhead Press", sets: 3, lastMaxKg: 55 },
+      { id: "cableFly", name: "Cable Fly", sets: 3, lastMaxKg: 30 },
+    ]},
+    { id: "day2", name: "Day 2 - Pull", exercises: [
+      { id: "deadlift", name: "Deadlift", sets: 3, lastMaxKg: 140 },
+      { id: "row", name: "Barbell Row", sets: 4, lastMaxKg: 70 },
+    ]},
+    { id: "day3", name: "Day 3 - Legs", exercises: [
+      { id: "squat", name: "Back Squat", sets: 5, lastMaxKg: 110 },
+      { id: "legExt", name: "Leg Extension", sets: 3, lastMaxKg: 45 },
+    ]},
   ],
-};
-
-const safeAlert = (title, msg = "") => {
-  if (Platform.OS === "web") {
-    if (typeof window !== "undefined") window.alert(`${title}\n${msg}`);
-    else console.log("ALERT:", title, msg);
-  } else {
-    Alert.alert(title, msg);
-  }
 };
 
 export default function TrackWorkout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  // keep the button above tabs
+  // keep the button above BottomTabs
   const TAB_CARD_HEIGHT = 64;
   const TAB_OUTER_MARGIN = 16;
   const EXTRA_GAP = 8;
   const BTN_OFFSET = TAB_CARD_HEIGHT + TAB_OUTER_MARGIN + Math.max(insets.bottom, 12) + EXTRA_GAP;
 
-  // auth + server state
-  const [token, setToken] = useState("");
-  useEffect(() => {
-    AsyncStorage.getItem("token").then((t) => setToken(t || ""));
-  }, []);
+  const [plan] = useState(samplePlan);
+  const [selectedDayId, setSelectedDayId] = useState(plan.days[0]?.id);
 
-  // “picked day” and session that DayPicker loads for that day
-  const [selectedDayId, setSelectedDayId] = useState(null);
-  const [session, setSession] = useState(null);            // full session doc from /view
-  const [maxByExercise, setMaxByExercise] = useState({});  // from /view
-  const [nameById, setNameById] = useState({});            // map built from /plans/me
-
-  // local log UI (unchanged)
+  // log shape: { [exerciseId]: { exercise, sets: [{weight, reps}] } }
   const [log, setLog] = useState({});
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // fallback day card label only (while plan loads)
   const currentDay = useMemo(
-    () => samplePlan.days.find((d) => String(d.id) === String(selectedDayId)) ?? samplePlan.days[0],
-    [selectedDayId]
+    () => plan.days.find((d) => d.id === selectedDayId) ?? plan.days[0],
+    [plan, selectedDayId]
   );
 
-  // local log helpers (unchanged)
-  const updateSet = (exId, idx, field, value) => {
+  /* ===== log actions ===== */
+  const addExerciseToLog = (ex) =>
+    setLog((prev) => (prev[ex.id] ? prev : { ...prev, [ex.id]: { exercise: ex, sets: [{ weight: "", reps: "" }] } }));
+
+  const removeExerciseFromLog = (exId) =>
+    setLog((prev) => { const next = { ...prev }; delete next[exId]; return next; });
+
+  const updateSet = (exId, idx, field, value) =>
     setLog((prev) => {
-      const entry = prev[exId];
-      if (!entry) return prev;
-      const sets = [...entry.sets];
-      sets[idx] = { ...sets[idx], [field]: value };
+      const entry = prev[exId]; if (!entry) return prev;
+      const sets = [...entry.sets]; sets[idx] = { ...sets[idx], [field]: value };
       return { ...prev, [exId]: { ...entry, sets } };
     });
-  };
-  const addSet = (exId) => {
-    setLog((prev) => {
-      const entry = prev[exId];
-      if (!entry) return prev;
+
+  const addSet = (exId) =>
+    setLog((prev) => { const entry = prev[exId]; if (!entry) return prev;
       return { ...prev, [exId]: { ...entry, sets: [...entry.sets, { weight: "", reps: "" }] } };
     });
-  };
-  const removeSet = (exId, idx) => {
+
+  const removeSet = (exId, idx) =>
     setLog((prev) => {
-      const entry = prev[exId];
-      if (!entry) return prev;
+      const entry = prev[exId]; if (!entry) return prev;
       const nextSets = entry.sets.filter((_, i) => i !== idx);
-      if (nextSets.length === 0) {
-        const copy = { ...prev };
-        delete copy[exId];
-        return copy;
-      }
+      if (nextSets.length === 0) { const copy = { ...prev }; delete copy[exId]; return copy; }
       return { ...prev, [exId]: { ...entry, sets: nextSets } };
     });
-  };
-  const removeExerciseFromLog = (exId) => {
-    setLog((prev) => {
-      const next = { ...prev };
-      delete next[exId];
-      return next;
-    });
+
+  /* ===== finish workout ===== */
+  const handleFinishWorkout = async () => {
+    const entries = Object.values(log);
+    if (entries.length === 0) { safeAlert("Nothing to save", "Add at least one exercise before finishing."); return; }
+
+    let totalSets = 0, completedSets = 0, totalVolume = 0;
+    const payload = {
+      planId: plan.id,
+      dayId: selectedDayId,
+      date: new Date().toISOString(),
+      entries: entries.map(({ exercise, sets }) => {
+        const cleaned = sets.map((s) => ({
+          weight: s.weight === "" ? null : Number(s.weight),
+          reps: s.reps === "" ? null : Number(s.reps),
+        }));
+        totalSets += cleaned.length;
+        cleaned.forEach((s) => { if (s.weight != null && s.reps != null) { completedSets += 1; totalVolume += (Number(s.weight)||0) * (Number(s.reps)||0); }});
+        return { exerciseId: exercise.id, name: exercise.name, sets: cleaned };
+      }),
+      summary: { totalSets, completedSets, totalVolume },
+    };
+
+    console.log("Workout payload:", payload);
+    safeAlert("Workout finished!", `Exercises: ${entries.length}\nSets logged: ${completedSets}/${totalSets}\nVolume: ${totalVolume} kg·reps`);
+    setLog({});
   };
 
   const finishDisabled = Object.values(log).length === 0;
-  const COL = { EX_MIN: 240, SET_W: 72, NUM_W: 96, BTN_W: 48 };
 
   return (
     <View className="flex-1 bg-bg">
@@ -135,65 +146,45 @@ export default function TrackWorkout() {
         <Text className="text-muted mt-1">Log sets and weights for today’s session.</Text>
       </View>
 
-      {/* Day picker – this is where the 3 routes happen */}
       <DayPicker
-        token={token}
+        days={plan.days}
         selectedDayId={selectedDayId}
-        onSelectDay={(id) => {
-          setSelectedDayId(id);
-          setLog({}); // optional: clear local log when switching days
-        }}
-        onSessionLoaded={({ session, maxByExercise, nameById: map }) => {
-          setSession(session);
-          setMaxByExercise(maxByExercise || {});
-          if (map) setNameById(map);
-        }}
-        initialPlan={samplePlan}
+        onSelect={setSelectedDayId}
       />
 
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: BTN_OFFSET + 80 }}>
-        {/* Summary table – shows planned + max for the picked session */}
-        <SummaryTable
-          key={session?._id /* force refresh when day/session changes */}
-          token={token}
-          sessionId={session?._id}
-          fallbackExercises={currentDay?.exercises ?? []}
-          nameById={nameById}
-        />
+      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 64 + 16 + Math.max(insets.bottom, 12) + 8 + 80 }}>
+        <SummaryTable day={currentDay} log={log} />
 
-        {/* Local log UI (your existing editor table) */}
-        <AddExerciseTable
-          log={log}
-          updateSet={updateSet}
-          removeSet={removeSet}
-          addSet={addSet}
-          removeExerciseFromLog={removeExerciseFromLog}
-          onOpenPicker={() => setPickerOpen(true)}
-          COL={COL}
-        />
+        {/* כפתור הפלוס שפותח את המודאל נשאר כאן כדי לשלוט ב-UI */}
+        <View className="mt-4 bg-card rounded-xl border border-border">
+          <View className="flex-row items-center justify-between px-4 py-3">
+            <Text className="text-text font-extrabold">Add exercise</Text>
+            <TouchableOpacity onPress={() => setPickerOpen(true)} className="p-2 rounded-lg bg-field border border-fieldBorder">
+              <MaterialCommunityIcons name="plus" size={20} color="#007BFF" />
+            </TouchableOpacity>
+          </View>
+
+          {/* טבלת הלוג */}
+          <LogTable
+            log={log}
+            addSet={addSet}
+            removeSet={removeSet}
+            updateSet={updateSet}
+            removeExerciseFromLog={removeExerciseFromLog}
+          />
+        </View>
 
         <View className="h-28" />
       </ScrollView>
 
-      {/* Finish button – keep local for now */}
-      <FinishWorkoutButton
-        disabled={finishDisabled}
-        onPress={() => safeAlert("Finish Workout", "Wire to close-session when you’re ready")}
-        bottomOffset={BTN_OFFSET}
-      />
+      <FinishButton offsetBottom={64 + 16 + Math.max(insets.bottom, 12) + 8} disabled={finishDisabled} onPress={handleFinishWorkout} />
 
-      {/* Exercise Picker – still for the local log */}
       <ExercisePickerModal
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        currentDay={currentDay}
+        day={currentDay}
         log={log}
-        addExerciseToLog={(ex) =>
-          setLog((prev) =>
-            prev[ex.id] ? prev : { ...prev, [ex.id]: { exercise: ex, sets: [{ weight: "", reps: "" }] } }
-          )
-        }
-        getEffectiveLastMax={() => 0}
+        onPick={addExerciseToLog}
       />
 
       <BottomTabs role={20} currentHref="/(screens)/tracking" />
