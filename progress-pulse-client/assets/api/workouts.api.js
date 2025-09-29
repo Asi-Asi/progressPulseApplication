@@ -63,6 +63,15 @@ export function removeSet({ token, sessionId, exerciseId, setNumber }) {
     headers: { Authorization: `Bearer ${token}` },
   }).then(parse);
 }
+
+export async function discardSession({ token, sessionId }) {
+  return request(`/api/workouts/session/${sessionId}/discard`, {
+    method: "POST",
+    token,
+  });
+}
+
+
 export function closeSession({ token, sessionId }) {
   return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/close`, {
     method: "POST",

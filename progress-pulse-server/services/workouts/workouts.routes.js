@@ -5,7 +5,8 @@ import {
     addExerciseToSession, removeExercise, addSet, updateSet, removeSet,
     closeSessionWithResults,
     listMyHistory, getMyWorkoutById,
-    listTraineeHistory, getTraineeWorkoutById, getTodaySession
+    listTraineeHistory, getTraineeWorkoutById, getTodaySession,
+    discardSession
 } from './workouts.controller.js';
 
 const workoutRouter = express.Router();
@@ -45,11 +46,16 @@ workoutRouter
     // To close the session and save results (with optional notes)
     .post('/sessions/:sessionId/close', closeSessionWithResults)
 
+
+    // To discard (hard-delete) an OPEN session
+    .post('/sessions/:sessionId/discard', discardSession)
+
     // Returns a list of a closed workout sessions (summary) for the current user
     .get('/history', listMyHistory)
 
     // Returns details of a specific closed workout session for the current user
     .get('/history/:workoutId', getMyWorkoutById)
+
 
 
     // Coach

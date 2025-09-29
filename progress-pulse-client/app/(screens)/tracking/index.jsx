@@ -107,9 +107,17 @@ export default function TrackWorkout() {
   async function refreshView(sessionId = session?._id) {
     if (!token || !sessionId) return;
     try {
+
+      console.log("[TRACK] refreshView() -> sessionId:", sessionId);
+
       const { session: sess, maxByExercise: pr } = await getSessionView({ token, sessionId });
       setSession(sess);
       setMaxByExercise(pr || {});
+
+      console.log("[TRACK] refreshView() -> done:", {
+        sessId: sess?._id, status: sess?.status, planDay: sess?.planDay,
+        exCount: sess?.exercises?.length ?? 0
+      });
     } catch (e) {
     }
   }
@@ -119,11 +127,14 @@ export default function TrackWorkout() {
     const planId = planMeta?._id || planMeta?.planId || planMeta?.id;
     if (!planId) return safeAlert("Missing plan", "Finish your plan first.");
     try {
+      console.log("[TRACK] onStartSessionForDay() -> dayNumber:", dayNumber, "| planId:", planMeta?._id || planMeta?.planId || planMeta?.id);
       setStarting(true);
       setShowPicker(false); 
       const s = await createSession({ token, fromPlanId: planId, planDay: dayNumber });
       setSession(s);
       await refreshView(s._id);
+      console.log("[TRACK] started session:", { _id: s?._id, status: s?.status, planDay: s?.planDay });
+
     } catch (e) {
       setShowPicker(true);
       safeAlert("Start failed", e?.message || "Failed to start session");
@@ -135,11 +146,27 @@ export default function TrackWorkout() {
   }
 
   async function onAddExercise(exerciseId) {
-    try {
-      const updated = await apiAddExercise({ token, sessionId: session._id, exerciseId });
-      setSession(updated);
-    } catch (e) { safeAlert("Add exercise failed", e?.message || ""); }
+  const target = selectedSession || session; // ננסה קודם את המתאים ליום
+  console.log("[TRACK] onAddExercise ->", {
+    exerciseId,
+    selectedDayId,
+    targetSessionId: target?._id || null,
+    targetPlanDay: target?.planDay,
+    targetStatus: target?.status
+  });
+
+  if (!target?._id) {
+    return safeAlert("Start a session", "Pick a day and tap Start/Resume first.");
   }
+  try {
+    const updated = await apiAddExercise({ token, sessionId: target._id, exerciseId });
+    setSession(updated);
+    console.log("[TRACK] onAddExercise -> OK. exCount now:", updated?.exercises?.length ?? 0);
+  } catch (e) {
+    console.log("[TRACK] onAddExercise -> FAILED:", e?.message, e);
+    safeAlert("Add exercise failed", e?.message || "");
+  }
+}
 
   async function onRemoveExercise(exerciseId) {
     try {
@@ -192,6 +219,31 @@ export default function TrackWorkout() {
     [session, selectedDayId]
   );
 
+  const canResume = !!(
+    session &&
+    session.status === "open" &&
+    String(session.planDay) === String(selectedDayId)
+  );
+  useEffect(() => {
+  console.log("[TRACK] STATE SNAPSHOT =>",
+    {
+      selectedDayId,
+      session: session ? {
+        _id: session._id,
+        status: session.status,
+        planDay: session.planDay,
+        exCount: session.exercises?.length ?? 0,
+      } : null,
+      selectedSession: selectedSession ? {
+        _id: selectedSession._id,
+        status: selectedSession.status,
+        planDay: selectedSession.planDay,
+        exCount: selectedSession.exercises?.length ?? 0,
+      } : null,
+    }
+  );
+}, [session, selectedDayId, selectedSession]);
+
   const finishDisabled = !selectedSession || (selectedSession.exercises || []).length === 0;
 
 
@@ -238,15 +290,14 @@ useEffect(() => {
           />
 
           <View className="px-4 pt-4">
-            {session?.status === "open" ? (
+            {canResume ? (
+              // RESUME רק אם היום הנבחר הוא של הסשן הפתוח
               <TouchableOpacity
                 disabled={starting}
                 onPress={async () => {
                   try {
                     setStarting(true);
-                    setSelectedDayId(String(session.planDay)); // נבחר רק עכשיו
-                    setShowPicker(false);                      // נסגור רק עכשיו
-                    await refreshView(session._id);            // נטען את הלוג
+                    await refreshView(session._id);  // טען מצב עדכני
                   } finally {
                     setStarting(false);
                   }
@@ -265,6 +316,7 @@ useEffect(() => {
                 )}
               </TouchableOpacity>
             ) : (
+              // אחרת – START ליום שנבחר
               <TouchableOpacity
                 disabled={!selectedDayId || starting}
                 onPress={() => onStartSessionForDay(Number(selectedDayId))}
@@ -311,6 +363,7 @@ useEffect(() => {
               name: `Exercise ${String(e.exerciseId).slice(-4)}`,
               sets: e.sets || [],
             }))}
+            disabled={!selectedSession}
             onAddSet={(exerciseId) => onAddSet(exerciseId)}
             onRemoveSet={(exerciseId, idx) => onRemoveSet(exerciseId, idx + 1)}
             onUpdateSet={(exerciseId, idx, field, value) => {
@@ -339,6 +392,9 @@ useEffect(() => {
         day={currentDay}
         selectedIds={new Set((selectedSession?.exercises || []).map(e => String(e.exerciseId)))}
         onPick={(exerciseId) => {
+
+          console.log("[TRACK] pick exercise from plan:", { exerciseId, forDay: selectedDayId, sessionId: selectedSession?._id || session?._id || null });
+
           if (!exerciseId) return;
           onAddExercise(exerciseId);
           setPickerOpen(false);

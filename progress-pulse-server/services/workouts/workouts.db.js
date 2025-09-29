@@ -242,6 +242,26 @@ export async function removeSetDb(userId, sessionId, exerciseId, setNumber) {
     }
 }
 
+
+export async function discardSessionDb(userId, sessionId) {
+    let client = null;
+    try {
+        client = await MongoClient.connect(CN_STR);
+        const db = client.db(DB_NAME);
+        const col = db.collection(WORKOUTS);
+
+        const r = await col.deleteOne({
+        _id: oid(sessionId),
+        userId: oid(userId),
+        status: 'open',           // בטוח מוחקים רק סשן פתוח
+        });
+
+        return r.deletedCount > 0;
+    } finally {
+        if (client) await client.close();
+    }
+}
+
 // ---- Close ----
 export async function closeSessionDb(userId, sessionId) {
     let client = null;

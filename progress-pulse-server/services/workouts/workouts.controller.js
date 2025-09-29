@@ -3,7 +3,8 @@ import { validateOpen, validateSetPayload } from './workouts.model.js';
 import {
     getTodayOpenSession, snapshotPlanDay, createOpenSession, getSession,
     addExercise, removeExerciseDb, addSetDb, updateSetDb, removeSetDb,
-    closeSessionDb, maxByExercise, listHistoryDb
+    closeSessionDb, maxByExercise, listHistoryDb,
+    discardSessionDb
 } from './workouts.db.js';
 
 
@@ -112,6 +113,39 @@ export async function closeSessionWithResults(req,res,next){
         if(!doc) return res.status(404).json({ message:'Session not found or already closed' });
         res.json(doc);
     } catch(err){ next(err); }
+}
+
+
+// DELETE-like (דרך POST) על /sessions/:sessionId/discard
+export async function discardSession(req, res, next) {
+    const userId = req.user._id;
+    const { sessionId } = req.params;
+
+    if (!ObjectId.isValid(sessionId)) {
+        return res.status(400).json({ message: 'Invalid id' });
+    }
+
+    try {
+        // נבדוק אם קיים בכלל, כדי להחזיר סטטוס מדויק
+        const doc = await getSession(userId, sessionId);
+        if (!doc) {
+        return res.status(404).json({ message: 'Session not found' });
+        }
+        if (doc.status === 'closed') {
+        return res.status(409).json({ message: 'Session already closed' });
+        }
+
+        // פתוח → מוחקים
+        const ok = await discardSessionDb(userId, sessionId);
+        if (!ok) {
+        // נדיר: מרוץ/שינוי מצב
+        return res.status(404).json({ message: 'Session not found' });
+        }
+
+        return res.status(204).send(); // No Content
+    } catch (err) {
+        next(err);
+    }
 }
 
 // History (me)

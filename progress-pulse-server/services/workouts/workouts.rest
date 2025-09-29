@@ -1,7 +1,6 @@
 @host = https://progresspulseapplication.onrender.com
 # Paste your JWT after login (keep the "Bearer " prefix)
-@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg3NTA5NjUsImV4cCI6MTc1ODc1MTg2NX0.-gMUi2e0Q8mhX_IG99Gbxk4w0S4smKJWwUCMOAWgb6k
-# Set after GET /api/plans/me (value of _id)
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQ2YTgzZTJlMmFiOGYzMjAwNTA5ZDMiLCJybHYiOjIwLCJlbWFpbCI6ImFobWFkQGNvbm5lY3QuY29tIiwiaWF0IjoxNzU5MTc0MDM2LCJleHAiOjE3NTkxNzQ5MzZ9._QRDbaczJXkhC9uuDgIQsQGDeUk4ffrRP9Ns05HwW6Q
 @planId = 68d31289cfbe22f2c15df930
 
 # Set after POST /api/workouts/sessions (value of _id in response)
@@ -17,8 +16,8 @@ POST {{host}}/api/users/login
 Content-Type: application/json
 
 {
-  "email": "demo+62@example.com",
-  "password": "newsecurepassword"
+  "email": "ahmad@connect.com",
+  "password": "123456"
 }
 
 ###
@@ -163,4 +162,12 @@ Authorization: {{token}}
 # 12) Single closed workout by id (use the same sessionId if you closed it)
 ############################################################
 GET {{host}}/api/workouts/history/{{sessionId}}
+Authorization: {{token}}
+
+
+
+###
+
+
+POST {{host}}/api/workouts/sessions/68daa2d87bf32a5d286f83e0/discard
 Authorization: {{token}}
