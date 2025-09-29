@@ -1,56 +1,71 @@
 // assets/api/workouts.api.js
-import { API_URL } from './client';
+import { API_URL } from "./client";
 
-async function request(path, { method='GET', token, body } = {}) {
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    credentials: 'include',
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const raw = await res.text();
-  const data = raw ? (()=>{ try { return JSON.parse(raw); } catch { return raw; }})() : null;
+const parse = async (res) => {
+  const txt = await res.text();
+  const data = txt ? (() => { try { return JSON.parse(txt); } catch { return txt; } })() : null;
   if (!res.ok) {
     const err = new Error((data && data.message) || `HTTP ${res.status}`);
-    err.status = res.status; err.payload = typeof data === 'string' ? { raw:data } : data;
+    err.status = res.status;
+    err.payload = typeof data === "string" ? { raw: data } : data;
     throw err;
   }
   return data;
-}
-
-export const workoutsApi = {
-  // 1) פתיחה/שליפה של סשן היום
-  getTodaySession: ({ token }) =>
-    request('/api/workouts/sessions/today', { token }),
-
-  createSessionFromPlan: ({ token, fromPlanId, planDay }) =>
-    request('/api/workouts/sessions', { method: 'POST', token, body: { fromPlanId, planDay } }),
-
-  // 2) תצוגת סשן (כולל maxByExercise)
-  getSessionView: ({ token, sessionId }) =>
-    request(`/api/workouts/sessions/${sessionId}/view`, { token }),
-
-  // 3) לייב אוטוסייב
-  addExercise: ({ token, sessionId, exerciseId }) =>
-    request(`/api/workouts/sessions/${sessionId}/exercises`, { method:'POST', token, body:{ exerciseId } }),
-
-  removeExercise: ({ token, sessionId, exerciseId }) =>
-    request(`/api/workouts/sessions/${sessionId}/exercises/${exerciseId}`, { method:'DELETE', token }),
-
-  addSet: ({ token, sessionId, exerciseId, reps, weight }) =>
-    request(`/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets`, { method:'POST', token, body:{ reps, weight } }),
-
-  updateSet: ({ token, sessionId, exerciseId, setNumber, reps, weight }) =>
-    request(`/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets/${setNumber}`, { method:'PUT', token, body:{ reps, weight } }),
-
-  removeSet: ({ token, sessionId, exerciseId, setNumber }) =>
-    request(`/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets/${setNumber}`, { method:'DELETE', token }),
-
-  // 4) סגירת הסשן
-  closeSession: ({ token, sessionId }) =>
-    request(`/api/workouts/sessions/${sessionId}/close`, { method:'POST', token }),
 };
-  
+
+export function getTodaySession({ token }) {
+  return fetch(`${API_URL}/api/workouts/sessions/today`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+export function createSession({ token, fromPlanId, planDay }) {
+  return fetch(`${API_URL}/api/workouts/sessions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fromPlanId, planDay }),
+  }).then(parse);
+}
+export function getSessionView({ token, sessionId }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/view`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+export function addExercise({ token, sessionId, exerciseId }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ exerciseId }),
+  }).then(parse);
+}
+export function removeExercise({ token, sessionId, exerciseId }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises/${exerciseId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+export function addSet({ token, sessionId, exerciseId, reps, weight }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reps, weight }),
+  }).then(parse);
+}
+export function updateSet({ token, sessionId, exerciseId, setNumber, reps, weight }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets/${setNumber}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reps, weight }),
+  }).then(parse);
+}
+export function removeSet({ token, sessionId, exerciseId, setNumber }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets/${setNumber}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+export function closeSession({ token, sessionId }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/close`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}

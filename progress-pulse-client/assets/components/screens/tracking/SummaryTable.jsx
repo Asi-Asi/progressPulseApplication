@@ -3,14 +3,14 @@ import React from "react";
 import { View, Text } from "react-native";
 import { getLastMaxFromLog } from "../../../utils/tracking";
 
-export default function SummaryTable({ day, log }) {
+export default function SummaryTable({ day, maxByExercise }) {
   const exercises = day?.exercises ?? [];
+  
   const getEffectiveLastMax = (ex) => {
     const fromPlan = ex.lastMaxKg ?? 0;
-    const fromLog = getLastMaxFromLog(log[ex.id]?.sets);
-    return Math.max(fromPlan, fromLog);
-    };
-
+    const fromPR = maxByExercise?.[ex.id] ?? 0;  
+    return Math.max(fromPlan, fromPR);
+  };
   return (
     <View className="mt-2 bg-card rounded-xl overflow-hidden border border-border">
       <View className="flex-row">

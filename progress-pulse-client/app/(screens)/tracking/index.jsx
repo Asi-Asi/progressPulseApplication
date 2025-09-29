@@ -1,5 +1,5 @@
 // app/(screens)/tracking/index.jsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,41 +9,169 @@ import AppLogo from "../../../assets/components/ui/AppLogo";
 import BookIcon from "../../../assets/images/svg/book.svg";
 import BottomTabs from "../../../assets/components/navigation/BottomTabs";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getMyPlan } from "../../../assets/api/plan.api";
+import {
+  getTodaySession, createSession, getSessionView,
+  addExercise as apiAddExercise, removeExercise as apiRemoveExercise,
+  addSet as apiAddSet, updateSet as apiUpdateSet, removeSet as apiRemoveSet,
+  closeSession as apiCloseSession,
+} from "../../../assets/api/workouts.api";
+
+import { safeAlert } from "../../../assets/utils/tracking";
+
 import DayPicker from "../../../assets/components/screens/tracking/DayPicker";
-
 import SummaryTable from "../../../assets/components/screens/tracking/SummaryTable";
-
 import LogTable from "../../../assets/components/screens/tracking/LogTable";
-
 import ExercisePickerModal from "../../../assets/components/screens/tracking/ExercisePickerModal";
-
 import FinishButton from "../../../assets/components/screens/tracking/FinishButton";
 
-import { getLastMaxFromLog, safeAlert } from "../../../assets/utils/tracking";
-
-/* === sample data — replace with your real plan === */
-const samplePlan = {
-  id: "P-001",
-  days: [
-    { id: "day1", name: "Day 1 - Push", exercises: [
-      { id: "bench", name: "Barbell Bench Press", sets: 4, lastMaxKg: 90 },
-      { id: "ohp", name: "Overhead Press", sets: 3, lastMaxKg: 55 },
-      { id: "cableFly", name: "Cable Fly", sets: 3, lastMaxKg: 30 },
-    ]},
-    { id: "day2", name: "Day 2 - Pull", exercises: [
-      { id: "deadlift", name: "Deadlift", sets: 3, lastMaxKg: 140 },
-      { id: "row", name: "Barbell Row", sets: 4, lastMaxKg: 70 },
-    ]},
-    { id: "day3", name: "Day 3 - Legs", exercises: [
-      { id: "squat", name: "Back Squat", sets: 5, lastMaxKg: 110 },
-      { id: "legExt", name: "Leg Extension", sets: 3, lastMaxKg: 45 },
-    ]},
-  ],
-};
-
+// ===== Screen =====
 export default function TrackWorkout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  // Auth + server models
+  const [token, setToken] = useState("");
+  const [planMeta, setPlanMeta] = useState(null);      // { _id, days:[{ dayNumber, exercises:[{exerciseId,sets}] }], locked? }
+  const [session, setSession] = useState(null);        // current open/closed session doc
+  const [maxByExercise, setMaxByExercise] = useState({}); // from /view
+
+  // UI state
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedDayId, setSelectedDayId] = useState(null); // string like "1","2",...
+
+  // Load token
+  useEffect(() => {
+    (async () => {
+      const t = await AsyncStorage.getItem("accessToken");
+      setToken(t || "");
+    })();
+  }, []);
+
+  // Load plan + today's session when token is ready
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const p = await getMyPlan({ token });
+
+        const planId = p?._id || p?.planId || p?.id;
+        setPlanMeta(planId ? { ...p, _id: planId } : p);
+
+
+        // default selected day (first day in plan)
+        const firstDayNum = (p?.days?.[0]?.dayNumber) ?? 1;
+        setSelectedDayId(String(firstDayNum));
+      } catch {
+        setPlanMeta(null);
+        setSelectedDayId("1");
+      }
+
+      try {
+        const s = await getTodaySession({ token });
+        setSession(s || null);
+        if (s?._id) await refreshView(s._id); // also load maxByExercise
+      } catch {
+        setSession(null);
+      }
+    })();
+  }, [token]);
+
+  // Build UI “days” adapter from planMeta
+  const uiDays = useMemo(() => {
+    const src = planMeta?.days ?? [];
+    return src.map((day) => {
+      const arr = day.items ?? day.exercises ?? [];      // <-- הכי חשוב
+      const dayNum = day.dayNumber ?? day.day;
+      return {
+        id: String(dayNum),
+        name: `Day ${dayNum}`,
+        exercises: arr.map((it) => ({
+          id: String(it.exerciseId),
+          name: it.name ?? `Exercise ${String(it.exerciseId).slice(-4)}`,
+          sets: it.sets ?? 0,
+          lastMaxKg: maxByExercise[String(it.exerciseId)] ?? 0,
+        })),
+      };
+    });
+  }, [planMeta, maxByExercise]);
+
+  const currentDay = useMemo(
+    () => uiDays.find((d) => d.id === String(selectedDayId)) ?? uiDays[0],
+    [uiDays, selectedDayId]
+  );
+
+  // ==== API helpers ====
+  async function refreshView(sessionId = session?._id) {
+    if (!token || !sessionId) return;
+    try {
+      const { session: sess, maxByExercise: pr } = await getSessionView({ token, sessionId });
+      setSession(sess);
+      setMaxByExercise(pr || {});
+    } catch (e) {
+    }
+  }
+
+  async function onStartSessionForDay(dayNumber) {
+    if (!token) return safeAlert("Missing token");
+    const planId = planMeta?._id || planMeta?.planId || planMeta?.id;
+    if (!planId) return safeAlert("Missing plan", "Finish your plan first.");
+    try {
+      const s = await createSession({ token, fromPlanId: planId, planDay: dayNumber });
+      setSession(s);
+      await refreshView(s._id);
+    } catch (e) {
+      safeAlert("Start failed", e?.message || "Failed to start session");
+    }
+  }
+
+  async function onAddExercise(exerciseId) {
+    try {
+      const updated = await apiAddExercise({ token, sessionId: session._id, exerciseId });
+      setSession(updated);
+    } catch (e) { safeAlert("Add exercise failed", e?.message || ""); }
+  }
+
+  async function onRemoveExercise(exerciseId) {
+    try {
+      const updated = await apiRemoveExercise({ token, sessionId: session._id, exerciseId });
+      setSession(updated);
+    } catch (e) { safeAlert("Remove exercise failed", e?.message || ""); }
+  }
+
+  async function onAddSet(exerciseId) {
+    try {
+      const updated = await apiAddSet({ token, sessionId: session._id, exerciseId, reps: 0, weight: 0 });
+      setSession(updated);
+    } catch (e) { safeAlert("Add set failed", e?.message || ""); }
+  }
+
+  async function onUpdateSet(exerciseId, setNumber1based, reps, weight) {
+    try {
+      const updated = await apiUpdateSet({
+        token, sessionId: session._id, exerciseId,
+        setNumber: setNumber1based, reps, weight
+      });
+      setSession(updated);
+    } catch (e) { safeAlert("Update set failed", e?.message || ""); }
+  }
+
+  async function onRemoveSet(exerciseId, setNumber1based) {
+    try {
+      const updated = await apiRemoveSet({ token, sessionId: session._id, exerciseId, setNumber: setNumber1based });
+      setSession(updated);
+    } catch (e) { safeAlert("Remove set failed", e?.message || ""); }
+  }
+
+  async function onFinish() {
+    try {
+      const closed = await apiCloseSession({ token, sessionId: session._id });
+      setSession(closed); // status: 'closed'
+      safeAlert("Workout finished", "Saved to history.");
+    } catch (e) { safeAlert("Finish failed", e?.message || ""); }
+  }
+
 
   // keep the button above BottomTabs
   const TAB_CARD_HEIGHT = 64;
@@ -51,73 +179,19 @@ export default function TrackWorkout() {
   const EXTRA_GAP = 8;
   const BTN_OFFSET = TAB_CARD_HEIGHT + TAB_OUTER_MARGIN + Math.max(insets.bottom, 12) + EXTRA_GAP;
 
-  const [plan] = useState(samplePlan);
-  const [selectedDayId, setSelectedDayId] = useState(plan.days[0]?.id);
-
-  // log shape: { [exerciseId]: { exercise, sets: [{weight, reps}] } }
-  const [log, setLog] = useState({});
-  const [pickerOpen, setPickerOpen] = useState(false);
-
-  const currentDay = useMemo(
-    () => plan.days.find((d) => d.id === selectedDayId) ?? plan.days[0],
-    [plan, selectedDayId]
+  const selectedSession = useMemo(
+    () => (session && String(session.planDay) === String(selectedDayId) ? session : null),
+    [session, selectedDayId]
   );
 
-  /* ===== log actions ===== */
-  const addExerciseToLog = (ex) =>
-    setLog((prev) => (prev[ex.id] ? prev : { ...prev, [ex.id]: { exercise: ex, sets: [{ weight: "", reps: "" }] } }));
+  const finishDisabled = !selectedSession || (selectedSession.exercises || []).length === 0;
 
-  const removeExerciseFromLog = (exId) =>
-    setLog((prev) => { const next = { ...prev }; delete next[exId]; return next; });
 
-  const updateSet = (exId, idx, field, value) =>
-    setLog((prev) => {
-      const entry = prev[exId]; if (!entry) return prev;
-      const sets = [...entry.sets]; sets[idx] = { ...sets[idx], [field]: value };
-      return { ...prev, [exId]: { ...entry, sets } };
-    });
-
-  const addSet = (exId) =>
-    setLog((prev) => { const entry = prev[exId]; if (!entry) return prev;
-      return { ...prev, [exId]: { ...entry, sets: [...entry.sets, { weight: "", reps: "" }] } };
-    });
-
-  const removeSet = (exId, idx) =>
-    setLog((prev) => {
-      const entry = prev[exId]; if (!entry) return prev;
-      const nextSets = entry.sets.filter((_, i) => i !== idx);
-      if (nextSets.length === 0) { const copy = { ...prev }; delete copy[exId]; return copy; }
-      return { ...prev, [exId]: { ...entry, sets: nextSets } };
-    });
-
-  /* ===== finish workout ===== */
-  const handleFinishWorkout = async () => {
-    const entries = Object.values(log);
-    if (entries.length === 0) { safeAlert("Nothing to save", "Add at least one exercise before finishing."); return; }
-
-    let totalSets = 0, completedSets = 0, totalVolume = 0;
-    const payload = {
-      planId: plan.id,
-      dayId: selectedDayId,
-      date: new Date().toISOString(),
-      entries: entries.map(({ exercise, sets }) => {
-        const cleaned = sets.map((s) => ({
-          weight: s.weight === "" ? null : Number(s.weight),
-          reps: s.reps === "" ? null : Number(s.reps),
-        }));
-        totalSets += cleaned.length;
-        cleaned.forEach((s) => { if (s.weight != null && s.reps != null) { completedSets += 1; totalVolume += (Number(s.weight)||0) * (Number(s.reps)||0); }});
-        return { exerciseId: exercise.id, name: exercise.name, sets: cleaned };
-      }),
-      summary: { totalSets, completedSets, totalVolume },
-    };
-
-    console.log("Workout payload:", payload);
-    safeAlert("Workout finished!", `Exercises: ${entries.length}\nSets logged: ${completedSets}/${totalSets}\nVolume: ${totalVolume} kg·reps`);
-    setLog({});
-  };
-
-  const finishDisabled = Object.values(log).length === 0;
+// השוואה בין יום שנבחר לסשן פתוח
+useEffect(() => {
+  const match = session && String(session.planDay) === String(selectedDayId);
+  console.log("[TRACK] session check => planDay:", session?.planDay, "| selectedDayId:", selectedDayId, "| match:", match);
+}, [session, selectedDayId]);
 
   return (
     <View className="flex-1 bg-bg">
@@ -146,45 +220,84 @@ export default function TrackWorkout() {
         <Text className="text-muted mt-1">Log sets and weights for today’s session.</Text>
       </View>
 
+      {/* Day picker (from plan) */}
       <DayPicker
-        days={plan.days}
-        selectedDayId={selectedDayId}
+        days={uiDays}
+        selectedDayId={String(selectedDayId)}
         onSelect={setSelectedDayId}
       />
 
-      <ScrollView className="flex-1 px-4" contentContainerStyle={{ paddingBottom: 64 + 16 + Math.max(insets.bottom, 12) + 8 + 80 }}>
-        <SummaryTable day={currentDay} log={log} />
+      {/* Start session CTA (when no open session) */}
+      {!selectedSession ? (
+        <View className="px-4 pt-4">
+          <TouchableOpacity
+            onPress={() => onStartSessionForDay(Number(selectedDayId) || 1)}
+            className="rounded-xl px-4 py-3 bg-primary"
+          >
+            <Text className="text-onPrimary font-extrabold">
+              Start session for {currentDay?.name || `Day ${selectedDayId}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
-        {/* כפתור הפלוס שפותח את המודאל נשאר כאן כדי לשלוט ב-UI */}
+      {/* Content */}
+      <ScrollView
+        className="flex-1 px-4"
+        contentContainerStyle={{ paddingBottom: 64 + 16 + Math.max(insets.bottom, 12) + 8 + 80 }}
+      >
+        <SummaryTable day={currentDay} maxByExercise={maxByExercise} />
+
+        {/* Add exercise + log */}
         <View className="mt-4 bg-card rounded-xl border border-border">
           <View className="flex-row items-center justify-between px-4 py-3">
             <Text className="text-text font-extrabold">Add exercise</Text>
-            <TouchableOpacity onPress={() => setPickerOpen(true)} className="p-2 rounded-lg bg-field border border-fieldBorder">
-              <MaterialCommunityIcons name="plus" size={20} color="#007BFF" />
+            <TouchableOpacity
+              onPress={() => setPickerOpen(true)}
+              className="p-2 rounded-lg bg-field border border-fieldBorder"
+            >
+              <MaterialCommunityIcons name="plus" size={20} />
             </TouchableOpacity>
           </View>
 
-          {/* טבלת הלוג */}
           <LogTable
-            log={log}
-            addSet={addSet}
-            removeSet={removeSet}
-            updateSet={updateSet}
-            removeExerciseFromLog={removeExerciseFromLog}
+            items={(selectedSession?.exercises || []).map(e => ({
+              exerciseId: e.exerciseId,
+              name: `Exercise ${String(e.exerciseId).slice(-4)}`,
+              sets: e.sets || [],
+            }))}
+            onAddSet={(exerciseId) => onAddSet(exerciseId)}
+            onRemoveSet={(exerciseId, idx) => onRemoveSet(exerciseId, idx + 1)}
+            onUpdateSet={(exerciseId, idx, field, value) => {
+              const reps    = field === "reps"    ? Number(value) : undefined;
+              const weight  = field === "weight"  ? Number(value) : undefined;
+              onUpdateSet(exerciseId, idx + 1, reps ?? undefined, weight ?? undefined);
+            }}
+            onRemoveExercise={(exerciseId) => onRemoveExercise(exerciseId)}
           />
         </View>
 
         <View className="h-28" />
       </ScrollView>
 
-      <FinishButton offsetBottom={64 + 16 + Math.max(insets.bottom, 12) + 8} disabled={finishDisabled} onPress={handleFinishWorkout} />
+      {/* Finish button */}
+      <FinishButton
+        offsetBottom={BTN_OFFSET}
+        disabled={finishDisabled}
+        onPress={onFinish}
+      />
 
+      {/* Exercise picker → adds planned exercise to session */}
       <ExercisePickerModal
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
         day={currentDay}
-        log={log}
-        onPick={addExerciseToLog}
+        selectedIds={new Set((selectedSession?.exercises || []).map(e => String(e.exerciseId)))}
+        onPick={(exerciseId) => {
+          if (!exerciseId) return;
+          onAddExercise(exerciseId);
+          setPickerOpen(false);
+        }}  
       />
 
       <BottomTabs role={20} currentHref="/(screens)/tracking" />

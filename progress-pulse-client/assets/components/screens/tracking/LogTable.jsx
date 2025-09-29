@@ -6,25 +6,14 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 const COL = { EX_MIN: 240, SET_W: 72, NUM_W: 96, BTN_W: 48 };
 
 export default function LogTable({
-  log, addSet, removeSet, updateSet, removeExerciseFromLog,
-}) {
-  const rows = Object.values(log);
+    items, onAddSet, onRemoveSet, onUpdateSet, onRemoveExercise,
+  }) {
+  const rows = items || [];
 
   return (
+
+    
     <View className="mt-4 bg-card rounded-xl border border-border">
-      <View className="flex-row items-center justify-between px-4 py-3">
-        <Text className="text-text font-extrabold">Add exercise</Text>
-        {/* הכפתור לפתיחת פקר מגיע מהמסך הראשי, פה רק כותרת */}
-      </View>
-
-      {/* swipe hint */}
-      <View className="px-4 pb-1 -mt-2">
-        <View className="self-start flex-row items-center gap-1.5 px-2 py-1 rounded-full bg-field border border-fieldBorder">
-          <MaterialCommunityIcons name="gesture-swipe-horizontal" size={14} color="#667085" />
-          <Text className="text-[12px] text-muted">Swipe left/right to see all columns</Text>
-        </View>
-      </View>
-
       <View className="border-t border-border">
         <ScrollView horizontal showsHorizontalScrollIndicator>
           <View style={{ minWidth: COL.EX_MIN + COL.SET_W + COL.NUM_W + COL.NUM_W + COL.BTN_W }}>
@@ -49,17 +38,17 @@ export default function LogTable({
             {rows.length === 0 ? (
               <Text className="text-muted px-4 py-3">No exercises added yet.</Text>
             ) : (
-              rows.map(({ exercise, sets }) => (
-                <View key={exercise.id} className="border-t border-border">
+              rows.map(({ exerciseId, name, sets }) => (
+                <View key={String(exerciseId)} className="border-t border-border">
                   {sets.map((s, idx) => (
                     <View key={idx} className="flex-row items-stretch">
                       {idx === 0 ? (
                         <View className="px-3 py-3 border-r border-border" style={{ minWidth: COL.EX_MIN, flexGrow: 1 }}>
                           <Text className="text-text" style={{ flexShrink: 1, flexWrap: "wrap", lineHeight: 18 }}>
-                            {exercise.name}
+                            {name || String(exerciseId)}
                           </Text>
                           <TouchableOpacity
-                            onPress={() => removeExerciseFromLog(exercise.id)}
+                            onPress={() => onRemoveExercise(exerciseId)}
                             className="mt-2 self-start px-2 py-1 rounded-lg bg-field border border-fieldBorder"
                           >
                             <Text className="text-text text-xs">remove</Text>
@@ -76,7 +65,7 @@ export default function LogTable({
                       <View className="justify-center border-r border-border px-2 py-2" style={{ width: COL.NUM_W }}>
                         <TextInput
                           value={String(s.reps ?? "")}
-                          onChangeText={(v) => updateSet(exercise.id, idx, "reps", v.replace(/[^0-9]/g, ""))}
+                          onChangeText={(v) => onUpdateSet(exerciseId, idx, "reps", v.replace(/[^0-9]/g, ""))}
                           keyboardType="numeric"
                           inputMode="numeric"
                           placeholder="0"
@@ -88,7 +77,7 @@ export default function LogTable({
                       <View className="justify-center border-r border-border px-2 py-2" style={{ width: COL.NUM_W }}>
                         <TextInput
                           value={String(s.weight ?? "")}
-                          onChangeText={(v) => updateSet(exercise.id, idx, "weight", v.replace(/[^0-9.]/g, ""))}
+                          onChangeText={(v) => onUpdateSet(exerciseId, idx, "weight", v.replace(/[^0-9.]/g, ""))}
                           keyboardType="numeric"
                           inputMode="decimal"
                           placeholder="0"
@@ -99,7 +88,7 @@ export default function LogTable({
 
                       <View className="items-center justify-center px-1" style={{ width: COL.BTN_W }}>
                         <TouchableOpacity
-                          onPress={() => removeSet(exercise.id, idx)}
+                          onPress={() => onRemoveSet(exerciseId, idx)}
                           className="px-2 py-1 rounded-md bg-field border border-fieldBorder"
                           accessibilityLabel={`Remove set ${idx + 1}`}
                         >
@@ -112,7 +101,7 @@ export default function LogTable({
                   <View className="flex-row border-t border-border">
                     <View className="border-r border-border" style={{ minWidth: COL.EX_MIN, flexGrow: 1 }} />
                     <TouchableOpacity
-                      onPress={() => addSet(exercise.id)}
+                      onPress={() => onAddSet(exerciseId)}
                       className="items-center justify-center border-r border-border"
                       style={{ width: COL.SET_W }}
                     >
