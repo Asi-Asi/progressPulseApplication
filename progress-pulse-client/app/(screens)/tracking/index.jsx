@@ -1,6 +1,6 @@
 // app/(screens)/tracking/index.jsx
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator  } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -39,7 +39,9 @@ export default function TrackWorkout() {
 
   // UI state
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [selectedDayId, setSelectedDayId] = useState(null); // string like "1","2",...
+  const [selectedDayId, setSelectedDayId] = useState(null); 
+  const [starting, setStarting] = useState(false);          // ספינר בזמן פתיחה
+  const [showPicker, setShowPicker] = useState(true);       // הסתרת ה-DayPicker אחרי START
 
   // Load token
   useEffect(() => {
@@ -60,20 +62,19 @@ export default function TrackWorkout() {
         setPlanMeta(planId ? { ...p, _id: planId } : p);
 
 
-        // default selected day (first day in plan)
-        const firstDayNum = (p?.days?.[0]?.dayNumber) ?? 1;
-        setSelectedDayId(String(firstDayNum));
+
       } catch {
         setPlanMeta(null);
-        setSelectedDayId("1");
       }
 
       try {
         const s = await getTodaySession({ token });
         setSession(s || null);
-        if (s?._id) await refreshView(s._id); // also load maxByExercise
+        // אם יש סשן פתוח – לא בוחרים ולא מסתירים. רק נשמור אותו ונציג כפתור Resume.
+        setShowPicker(true);
       } catch {
         setSession(null);
+        setShowPicker(true);
       }
     })();
   }, [token]);
@@ -98,7 +99,7 @@ export default function TrackWorkout() {
   }, [planMeta, maxByExercise]);
 
   const currentDay = useMemo(
-    () => uiDays.find((d) => d.id === String(selectedDayId)) ?? uiDays[0],
+    () => uiDays.find((d) => d.id === String(selectedDayId)) || null,
     [uiDays, selectedDayId]
   );
 
@@ -118,12 +119,19 @@ export default function TrackWorkout() {
     const planId = planMeta?._id || planMeta?.planId || planMeta?.id;
     if (!planId) return safeAlert("Missing plan", "Finish your plan first.");
     try {
+      setStarting(true);
+      setShowPicker(false); 
       const s = await createSession({ token, fromPlanId: planId, planDay: dayNumber });
       setSession(s);
       await refreshView(s._id);
     } catch (e) {
+      setShowPicker(true);
       safeAlert("Start failed", e?.message || "Failed to start session");
+
+    } finally {
+      setStarting(false);   
     }
+    
   }
 
   async function onAddExercise(exerciseId) {
@@ -221,25 +229,62 @@ useEffect(() => {
       </View>
 
       {/* Day picker (from plan) */}
-      <DayPicker
-        days={uiDays}
-        selectedDayId={String(selectedDayId)}
-        onSelect={setSelectedDayId}
-      />
+      {(!selectedSession && showPicker) && (
+        <>
+          <DayPicker
+            days={uiDays}
+            selectedDayId={String(selectedDayId || "")}
+            onSelect={setSelectedDayId}
+          />
 
-      {/* Start session CTA (when no open session) */}
-      {!selectedSession ? (
-        <View className="px-4 pt-4">
-          <TouchableOpacity
-            onPress={() => onStartSessionForDay(Number(selectedDayId) || 1)}
-            className="rounded-xl px-4 py-3 bg-primary"
-          >
-            <Text className="text-onPrimary font-extrabold">
-              Start session for {currentDay?.name || `Day ${selectedDayId}`}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
+          <View className="px-4 pt-4">
+            {session?.status === "open" ? (
+              <TouchableOpacity
+                disabled={starting}
+                onPress={async () => {
+                  try {
+                    setStarting(true);
+                    setSelectedDayId(String(session.planDay)); // נבחר רק עכשיו
+                    setShowPicker(false);                      // נסגור רק עכשיו
+                    await refreshView(session._id);            // נטען את הלוג
+                  } finally {
+                    setStarting(false);
+                  }
+                }}
+                className={`rounded-xl px-4 py-3 ${starting ? "bg-card opacity-60" : "bg-primary"}`}
+              >
+                {starting ? (
+                  <View className="flex-row items-center justify-center">
+                    <ActivityIndicator size="small" />
+                    <Text className="text-text font-extrabold ml-2">Resuming…</Text>
+                  </View>
+                ) : (
+                  <Text className="text-onPrimary font-extrabold">
+                    Resume session — Day {session?.planDay}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                disabled={!selectedDayId || starting}
+                onPress={() => onStartSessionForDay(Number(selectedDayId))}
+                className={`rounded-xl px-4 py-3 ${(!selectedDayId || starting) ? "bg-card opacity-60" : "bg-primary"}`}
+              >
+                {starting ? (
+                  <View className="flex-row items-center justify-center">
+                    <ActivityIndicator size="small" />
+                    <Text className="text-text font-extrabold ml-2">Starting…</Text>
+                  </View>
+                ) : (
+                  <Text className="text-onPrimary font-extrabold">
+                    {selectedDayId ? `Start session for Day ${selectedDayId}` : "Pick a day to start"}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
+      )}   
 
       {/* Content */}
       <ScrollView
