@@ -93,24 +93,25 @@ export async function addSet(req, res) {
 export async function updateSet(req, res) {
     try {
         const { sessionId, exerciseId } = req.params;
-        const setNumber = Number(req.params.setNumber); // <<< חשוב!
-        const reps   = Number(req.body?.reps);
-        const weight = Number(req.body?.weight);
+        const setNumber = Number(req.params.setNumber);   // <<<<<<<<<< חשוב
+        const reps   = Number(req.body.reps);
+        const weight = Number(req.body.weight);
 
-        const err = validateSetPayload({ reps, weight });
-        if (err) return res.status(400).json({ message: err });
         if (!Number.isInteger(setNumber) || setNumber < 1)
         return res.status(400).json({ message: 'Bad setNumber' });
 
-        const doc = await updateSetDb(req.user._id, sessionId, exerciseId, setNumber, { reps, weight });
-        if (doc === null)     return res.status(404).json({ message: 'Session not found' });
-        if (doc === 'CLOSED') return res.status(409).json({ message: 'Session already closed' });
-        if (doc === 'NO_EX')  return res.status(404).json({ message: 'Exercise not found' });
-        if (doc === 'NO_SET') return res.status(404).json({ message: 'Set not found' });
+        const bad = validateSetPayload({ reps, weight });
+        if (bad) return res.status(400).json({ message: bad });
 
-        return res.json(doc);
+        const out = await updateSetDb(req.user._id, sessionId, exerciseId, setNumber, { reps, weight });
+        if (out === null)      return res.status(404).json({ message: 'Session not found' });
+        if (out === 'CLOSED')  return res.status(409).json({ message: 'Session is closed' });
+        if (out === 'NO_EX')   return res.status(404).json({ message: 'Exercise not found' });
+        if (out === 'NO_SET')  return res.status(404).json({ message: 'Set not found' });
+
+        res.json(out);
     } catch (e) {
-        return res.status(500).json({ message: 'Update set failed' });
+        res.status(500).json({ message: 'Server error' });
     }
 }
 

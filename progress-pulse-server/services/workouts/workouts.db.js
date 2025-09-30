@@ -196,20 +196,30 @@ export async function updateSetDb(userId, sessionId, exerciseId, setNumber, setD
         const col = db.collection(WORKOUTS);
 
         const base = await col.findOne({ _id: oid(sessionId), userId: oid(userId) });
-        if (!base) return null;              // לא שייך למשתמש/לא קיים
+        if (!base) return null;
         if (base.status === 'closed') return 'CLOSED';
 
-        // שלב 2: המשך כמו שהיה (לא צריך עוד פעם לשלוף עם status:'open')
         const doc = base;
         const exIdx = doc.exercises.findIndex(e => String(e.exerciseId) === String(exerciseId));
         if (exIdx === -1) return 'NO_EX';
 
-        const sIdx = (doc.exercises[exIdx].sets || []).findIndex((s) => s.setNumber === setNumber);
+        const sNum = Number(setNumber);                         // ← המרה למספר
+        const sIdx = (doc.exercises[exIdx].sets || [])
+        .findIndex((s) => Number(s.setNumber) === sNum);      // ← השוואת מספרים
+
         if (sIdx === -1) return 'NO_SET';
 
-        doc.exercises[exIdx].sets[sIdx] = { ...doc.exercises[exIdx].sets[sIdx], ...setData };
-        await col.updateOne({ _id: doc._id }, { $set: { exercises: doc.exercises } });
+        // ודא שגם ה-payload הוא מספרים
+        const reps   = Number(setData?.reps);
+        const weight = Number(setData?.weight);
 
+        doc.exercises[exIdx].sets[sIdx] = {
+        ...doc.exercises[exIdx].sets[sIdx],
+        reps,
+        weight,
+        };
+
+        await col.updateOne({ _id: doc._id }, { $set: { exercises: doc.exercises } });
         return await col.findOne({ _id: doc._id });
     } finally {
         if (client) await client.close();

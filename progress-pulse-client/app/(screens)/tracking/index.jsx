@@ -215,32 +215,62 @@ export default function TrackWorkout() {
   }
 
   async function onUpdateSet(exerciseId, idx0, repsMaybe, weightMaybe) {
-    try {
-      const ex = (session?.exercises || []).find(e => String(e.exerciseId) === String(exerciseId));
-      const idx = Math.max(0, Number(idx0 ?? 0));      
-      const cur = ex?.sets?.[idx] || {};
+  try {
+    // מציאת התרגיל והסט לפני השליחה
+    const ex = (session?.exercises || []).find(e => String(e.exerciseId) === String(exerciseId));
+    const idx = Math.max(0, Number(idx0 ?? 0));  // 0-based index שנכנס מבחוץ
+    const cur = ex?.sets?.[idx] || {};
 
-      const reps   = repsMaybe   !== undefined && repsMaybe   !== "" ? Number(repsMaybe)   : Number(cur.reps ?? 0);
-      const weight = weightMaybe !== undefined && weightMaybe !== "" ? Number(weightMaybe) : Number(cur.weight ?? 0);
+    // גזירת הערכים שיישלחו
+    const reps   = repsMaybe   !== undefined && repsMaybe   !== "" ? Number(repsMaybe)   : Number(cur.reps ?? 0);
+    const weight = weightMaybe !== undefined && weightMaybe !== "" ? Number(weightMaybe) : Number(cur.weight ?? 0);
 
-      if (!Number.isFinite(reps)   || reps   < 0) throw new Error("Bad reps");
-      if (!Number.isFinite(weight) || weight < 0) throw new Error("Bad weight");
+    if (!Number.isFinite(reps)   || reps   < 0) throw new Error("Bad reps");
+    if (!Number.isFinite(weight) || weight < 0) throw new Error("Bad weight");
 
-      const setNumber = idx + 1;  
+    const setNumber = idx + 1; // השרת עובד 1-based
 
-      await apiUpdateSet({
-        token,
-        sessionId: session._id,
-        exerciseId,
-        setNumber,
-        reps,
-        weight,
-      });
-      await refreshView(session._id);
-    } catch (e) {
-      safeAlert("Update set failed", e?.message || "");
-    }
+    // ===== לוג לפני שליחה =====
+    console.groupCollapsed("[UPDATE_SET] sending");
+    console.log("sessionId:", session?._id);
+    console.log("exerciseId:", String(exerciseId));
+    console.log("setNumber(1-based):", setNumber, "  idx(0-based):", idx);
+    console.log("payload:", { reps, weight });
+    console.log("BEFORE sets (this exercise):", JSON.parse(JSON.stringify(ex?.sets || [])));
+    console.groupEnd();
+
+    // שליחה לשרת
+    const res = await apiUpdateSet({
+      token,
+      sessionId: session._id,
+      exerciseId,
+      setNumber,  // שים לב: 1-based
+      reps,
+      weight,
+    });
+    console.log("[UPDATE_SET] apiUpdateSet() response:", res);
+
+    // רענון ה־state המקומי
+    await refreshView(session._id);
+
+    // כדי לוודא/להדפיס את "אחרי", נקרא במפורש את ה-view (לא נשען על setState הא-סינכרוני)
+    const v = await getSessionView({ token, sessionId: session._id });
+    const exAfter = (v?.session?.exercises || []).find(e => String(e.exerciseId) === String(exerciseId));
+
+    console.groupCollapsed("[UPDATE_SET] after refresh");
+    console.log("AFTER sets (this exercise):", JSON.parse(JSON.stringify(exAfter?.sets || [])));
+    console.groupEnd();
+
+  } catch (e) {
+    console.group("[UPDATE_SET] FAILED");
+    console.log("err.name:", e?.name);
+    console.log("err.message:", e?.message);
+    console.log("err.status:", e?.status);
+    console.log("err.data:", e?.data);
+    console.groupEnd();
+    safeAlert("Update set failed", e?.message || "");
   }
+}
 
   async function onRemoveSet(exerciseId, idx0) {
     try {
