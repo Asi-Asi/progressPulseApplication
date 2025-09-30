@@ -95,3 +95,29 @@ export function closeSession({ token, sessionId }) {
     headers: { Authorization: `Bearer ${token}` },
   }).then(parse);
 }
+
+
+
+
+// ################################################################################################################################//
+// ################################################################################################################################//
+// ################################################################################################################################//
+// ==================================== History ====================================//
+
+export function listHistory({ token, from, to, skip = 0, limit = 50 }) {
+  const params = new URLSearchParams();
+  if (from) params.append("from", from);
+  if (to)   params.append("to", to);
+  params.append("skip", String(skip));
+  params.append("limit", String(limit));
+
+  return fetch(`${API_URL}/api/workouts/history?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+
+export function getWorkoutById({ token, workoutId }) {
+  return fetch(`${API_URL}/api/workouts/history/${workoutId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}

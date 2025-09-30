@@ -214,21 +214,21 @@ export default function TrackWorkout() {
     }
   }
 
-  async function onUpdateSet(exerciseId, idx0, repsMaybe, weightMaybe) {
+  async function onUpdateSet(exerciseId, setNumber1, repsMaybe, weightMaybe) {
   try {
     // מציאת התרגיל והסט לפני השליחה
     const ex = (session?.exercises || []).find(e => String(e.exerciseId) === String(exerciseId));
-    const idx = Math.max(0, Number(idx0 ?? 0));  // 0-based index שנכנס מבחוץ
+    const setNumber = Number(setNumber1);        // 1-based נכנס מבחוץ
+    const idx = Math.max(0, setNumber - 1);
     const cur = ex?.sets?.[idx] || {};
 
     // גזירת הערכים שיישלחו
     const reps   = repsMaybe   !== undefined && repsMaybe   !== "" ? Number(repsMaybe)   : Number(cur.reps ?? 0);
     const weight = weightMaybe !== undefined && weightMaybe !== "" ? Number(weightMaybe) : Number(cur.weight ?? 0);
 
-    if (!Number.isFinite(reps)   || reps   < 0) throw new Error("Bad reps");
+    if (!Number.isFinite(reps) || reps < 0) throw new Error("Bad reps");
     if (!Number.isFinite(weight) || weight < 0) throw new Error("Bad weight");
 
-    const setNumber = idx + 1; // השרת עובד 1-based
 
     // ===== לוג לפני שליחה =====
     console.groupCollapsed("[UPDATE_SET] sending");
@@ -244,7 +244,7 @@ export default function TrackWorkout() {
       token,
       sessionId: session._id,
       exerciseId,
-      setNumber,  // שים לב: 1-based
+      setNumber,  
       reps,
       weight,
     });
@@ -274,7 +274,7 @@ export default function TrackWorkout() {
 
   async function onRemoveSet(exerciseId, idx0) {
     try {
-      const setNumber = (Number(idx0 ?? 0) + 1);  
+      const setNumber = Number(idx0 ?? 1);  
       const updated = await apiRemoveSet({
         token,
         sessionId: session._id,
@@ -507,10 +507,8 @@ const addDisabled = !selectedSession || starting || mutating;
             disabled={!selectedSession || refreshing}
             onAddSet={(exerciseId) => onAddSet(exerciseId)}
             onRemoveSet={(exerciseId, idx1) => onRemoveSet(exerciseId, idx1)}
-            onUpdateSet={(exerciseId, idx1, field, value) => {
-              const reps    = field === "reps"    ? Number(value) : undefined;
-              const weight  = field === "weight"  ? Number(value) : undefined;
-              onUpdateSet(exerciseId, idx1, reps ?? undefined, weight ?? undefined);
+            onUpdateSet={(exerciseId, setNumber1, repsMaybe, weightMaybe) => {
+              onUpdateSet(exerciseId, setNumber1, repsMaybe, weightMaybe);
             }}
             onRemoveExercise={(exerciseId) => onRemoveExercise(exerciseId)}
           />

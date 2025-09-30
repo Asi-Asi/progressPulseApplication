@@ -1,13 +1,12 @@
 @host = https://progresspulseapplication.onrender.com
 # Paste your JWT after login (keep the "Bearer " prefix)
-@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQ2YTgzZTJlMmFiOGYzMjAwNTA5ZDMiLCJybHYiOjIwLCJlbWFpbCI6ImFobWFkQGNvbm5lY3QuY29tIiwiaWF0IjoxNzU5MTc0MDM2LCJleHAiOjE3NTkxNzQ5MzZ9._QRDbaczJXkhC9uuDgIQsQGDeUk4ffrRP9Ns05HwW6Q
-@planId = 68d31289cfbe22f2c15df930
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQ2YTgzZTJlMmFiOGYzMjAwNTA5ZDMiLCJybHYiOjIwLCJlbWFpbCI6ImFobWFkQGNvbm5lY3QuY29tIiwiaWF0IjoxNzU5MTk5Mjg4LCJleHAiOjE3NTkyMDAxODh9.r15FRpmxEG3t2ipo9HS_hGGw6Hh2vTTcUmAiuKEZ5l4
 
 # Set after POST /api/workouts/sessions (value of _id in response)
-@sessionId = 68d4471df678f9e8f1986984
+@sessionId = 68db3d0e5ca3569151629eed
 
 # Set from the plan's day you chose (or from the /view response)
-@exerciseId = 66f130bd3d9b4c7d5a9a7e13
+@exerciseId = 68d323efcfbe22f2c15df948
 
 ############################################################
 # 0) Login (get a JWT)
@@ -38,14 +37,14 @@ Authorization: {{token}}
 ############################################################
 # 2) Open today's session from plan day
 ############################################################
-POST {{host}}/api/workouts/sessions
-Authorization: {{token}}
-Content-Type: application/json
+# POST {{host}}/api/workouts/sessions
+# Authorization: {{token}}
+# Content-Type: application/json
 
-{
-  "fromPlanId": "{{planId}}",
-  "planDay": 1
-}
+# {
+#   "fromPlanId": "{{planId}}",
+#   "planDay": 2
+# }
 
 ###
 # Copy the returned "_id" into @sessionId above.
@@ -171,3 +170,12 @@ Authorization: {{token}}
 
 POST {{host}}/api/workouts/sessions/68daa2d87bf32a5d286f83e0/discard
 Authorization: {{token}}
+
+
+###
+
+PUT {{host}}/api/workouts/sessions/{sessionId}/exercises/{exerciseId}/sets/1
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "reps": 10, "weight": 15 }
