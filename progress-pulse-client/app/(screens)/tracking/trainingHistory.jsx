@@ -1,136 +1,162 @@
-// app/(screens)/tracking/training history.jsx
-import React, { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Modal } from "react-native";
-import { Stack } from "expo-router";
+// app/(screens)/tracking/trainingHistory.jsx
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, RefreshControl, Alert, Platform } from "react-native";
+import { Stack, useLocalSearchParams } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import AppLogo from "../../../assets/components/ui/AppLogo";
-import BottomTabs from "../../../assets/components/navigation/BottomTabs"; // <-- tabs
+import BottomTabs from "../../../assets/components/navigation/BottomTabs";
+
+import { getMyPlan } from "../../../assets/api/plan.api";
+import { listHistory, getWorkoutById } from "../../../assets/api/workouts.api";
+import { getTraineeHistory, getTraineeWorkout } from "../../../assets/api/coach.api";
+
+import { safeAlert } from "../../../assets/utils/tracking";
 
 
-/* ===== Demo data (replace with real API later) ===== */
-const DEMO_WORKOUTS = [
-  {
-    id: "w1",
-    date: "2025-08-30",
-    planId: "P-001",
-    dayId: "day1",
-    dayName: "Day 1 – Push",
-    summary: { totalSets: 10, completedSets: 10 },
-    entries: [
-      {
-        exerciseId: "bench",
-        name: "Barbell Bench Press",
-        sets: [
-          { weight: 80, reps: 5 },
-          { weight: 80, reps: 5 },
-          { weight: 80, reps: 5 },
-          { weight: 85, reps: 3 },
-        ],
-      },
-      {
-        exerciseId: "ohp",
-        name: "Overhead Press",
-        sets: [
-          { weight: 45, reps: 8 },
-          { weight: 45, reps: 8 },
-          { weight: 45, reps: 6 },
-        ],
-      },
-      {
-        exerciseId: "cableFly",
-        name: "Cable Fly",
-        sets: [
-          { weight: 25, reps: 12 },
-          { weight: 25, reps: 12 },
-          { weight: 25, reps: 10 },
-        ],
-      },
-    ],
-  },
-  {
-    id: "w2",
-    date: "2025-08-27",
-    planId: "P-001",
-    dayId: "day2",
-    dayName: "Day 2 – Pull",
-    summary: { totalSets: 7, completedSets: 7 },
-    entries: [
-      {
-        exerciseId: "deadlift",
-        name: "Deadlift",
-        sets: [
-          { weight: 140, reps: 5 },
-          { weight: 140, reps: 4 },
-          { weight: 130, reps: 5 },
-        ],
-      },
-      {
-        exerciseId: "row",
-        name: "Barbell Row",
-        sets: [
-          { weight: 70, reps: 8 },
-          { weight: 70, reps: 8 },
-          { weight: 70, reps: 8 },
-          { weight: 70, reps: 6 },
-        ],
-      },
-    ],
-  },
-  {
-    id: "w3",
-    date: "2025-08-24",
-    planId: "P-001",
-    dayId: "day3",
-    dayName: "Day 3 – Legs",
-    summary: { totalSets: 8, completedSets: 8 },
-    entries: [
-      {
-        exerciseId: "squat",
-        name: "Back Squat",
-        sets: [
-          { weight: 105, reps: 5 },
-          { weight: 105, reps: 5 },
-          { weight: 110, reps: 3 },
-          { weight: 110, reps: 3 },
-        ],
-      },
-      {
-        exerciseId: "legExt",
-        name: "Leg Extension",
-        sets: [
-          { weight: 40, reps: 12 },
-          { weight: 40, reps: 12 },
-          { weight: 45, reps: 10 },
-          { weight: 45, reps: 8 },
-        ],
-      },
-    ],
-  },
-];
 
-/* ===== Small helper ===== */
+/* ===== Helpers ===== */
 const formatDate = (iso) => {
+  if (!iso) return "";
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
 };
 
-export default function TrainingHistory() {
-  const [workouts] = useState(DEMO_WORKOUTS);
-  const [active, setActive] = useState(null);
+// הפקת מיפוי exerciseId -> name מתוך התכנית הנוכחית (אם יש)
+function buildNameMap(plan) {
+  const map = {};
+  (plan?.days ?? []).forEach(day => {
+    const arr = day.items ?? day.exercises ?? [];
+    arr.forEach(it => {
+      if (it?.exerciseId) map[String(it.exerciseId)] = it.name ?? "";
+    });
+  });
+  return map;
+}
 
-  const sorted = useMemo(
-    () =>
-      [...workouts].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      ),
-    [workouts]
-  );
+export default function TrainingHistory() {
+  const [token, setToken] = useState("");
+  const [plan, setPlan] = useState(null);
+  const [nameById, setNameById] = useState({});
+
+  //#################################################################################//
+  const { traineeId: _traineeId, traineeName } = useLocalSearchParams();
+  const traineeId = Array.isArray(_traineeId) ? _traineeId[0] : _traineeId;
+  const isCoachView = !!traineeId; 
+
+
+  // רשימת אימונים סגורים
+  const [items, setItems] = useState([]); // [{ _id, date:'YYYY-MM-DD', planDay, ... }]
+  const [total, setTotal] = useState(0);
+
+  // UI state
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [active, setActive] = useState(null); // מסמך מלא של אימון בודד
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // טעינת טוקן
+  useEffect(() => {
+    (async () => {
+      const t = await AsyncStorage.getItem("accessToken");
+      setToken(t || "");
+    })();
+  }, []);
+
+  // טעינת תכנית (כדי להציג שמות תרגילים אם קיימים)
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const p = await getMyPlan({ token });
+        setPlan(p || null);
+        setNameById(buildNameMap(p || null));
+      } catch {
+        setPlan(null);
+        setNameById({});
+      }
+    })();
+  }, [token]);
+
+  const fetchHistory = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const { items: rows = [], total: t = 0 } = isCoachView
+        ? await getTraineeHistory({ token, traineeId, skip: 0, limit: 50 })
+        : await listHistory({ token, skip: 0, limit: 50 });
+      setItems(rows);
+      setTotal(t);
+    } catch (e) {
+      if (Platform.OS === "web") alert(`Failed to load history: ${e?.message || ""}`);
+      else Alert.alert("Failed to load history", e?.message || "");
+    } finally {
+      setLoading(false);
+    }
+  }, [token, isCoachView, traineeId]);
+
+  // טעינת היסטוריה בהתחלה
+  useEffect(() => { if (token) fetchHistory(); }, [token, fetchHistory]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await fetchHistory(); }
+    finally { setRefreshing(false); }
+  }, [fetchHistory]);
+
+  // מיון יורד לפי תאריך (ה־API כבר מחזיר ממוין, אבל נוודא)
+  const sorted = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const byDate = String(b.date || "").localeCompare(String(a.date || ""));
+      if (byDate !== 0) return byDate;
+      const sa = b.startedAt ? new Date(b.startedAt).getTime() : 0;
+      const sb = a.startedAt ? new Date(a.startedAt).getTime() : 0;
+      return sa - sb; // גם כאן – חדש קודם
+    });
+  }, [items]);
+
+  // פתיחת מודאל: משיכת מסמך מלא של אימון לפי ID
+  const openDetail = useCallback(async (workoutId) => {
+    if (!token || !workoutId) return;
+    setLoadingDetail(true);
+    try {
+      const full = isCoachView
+      ? await getTraineeWorkout({ token, traineeId, workoutId })
+      : await getWorkoutById({ token, workoutId });
+      // התאמות קטנות ל־UI:
+      // session.status === 'closed', session.planDay, session.exercises: [{exerciseId, sets:[{setNumber,reps,weight}]}]
+      const entries = (full?.exercises || []).map(e => ({
+        exerciseId: e.exerciseId,
+        name: nameById[String(e.exerciseId)] || `Exercise ${String(e.exerciseId).slice(-4)}`,
+        sets: (e.sets || []).map(s => ({ weight: s?.weight ?? 0, reps: s?.reps ?? 0 })),
+      }));
+
+      const summary = {
+        totalSets: entries.reduce((acc, ex) => acc + (ex.sets?.length || 0), 0),
+        completedSets: entries.reduce((acc, ex) => acc + (ex.sets?.length || 0), 0), // כרגע אין "incomplete" בהיסטוריה
+      };
+
+      const decorated = {
+        _id: full?._id,
+        date: full?.date,                  // YYYY-MM-DD מהשרת
+        dayName: full?.planDay ? `Day ${full.planDay}` : "Workout",
+        entries,
+        summary,
+      };
+
+      setActive(decorated);
+    } catch (e) {
+      safeAlert("Open workout failed", e?.message || "");
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, [token, nameById, isCoachView, traineeId]);
+
+
+
 
   return (
-    <View className="flex-1 bg-bg">
+    <View className="flex-1 bg-bg"> 
       <Stack.Screen
         options={{
           headerTitle: () => <AppLogo />,
@@ -139,24 +165,40 @@ export default function TrainingHistory() {
         }}
       />
 
-      {/* Page title (the old header text) */}
+      {/* Page title */}
       <View className="px-4 pt-5">
-        <Text className="text-text text-2xl font-extrabold">Training History</Text>
-        <Text className="text-muted mt-1">Your finished sessions at a glance.</Text>
+        <Text className="text-text text-2xl font-extrabold">
+          {isCoachView ? `Training History — ${traineeName || ""}` : "Training History"}
+        </Text>
+        <Text className="text-muted mt-1">
+          {isCoachView ? "Closed sessions for this trainee." : "Your finished sessions at a glance."}
+        </Text>
       </View>
 
-      <ScrollView className="flex-1 px-4 pt-4">
-        {sorted.length === 0 ? (
+      {/* List */}
+      <ScrollView
+        className="flex-1 px-4 pt-4"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {loading ? (
+          <View className="mt-10 items-center">
+            <ActivityIndicator size="large" />
+            <Text className="text-muted mt-3">Loading…</Text>
+          </View>
+        ) : sorted.length === 0 ? (
           <Text className="text-muted text-center mt-10">No workouts yet.</Text>
         ) : (
           <View className="pb-10 gap-3">
             {sorted.map((w) => {
-              const { totalSets, completedSets } = w.summary || {};
-              const firstTwo = w.entries.slice(0, 2);
+              // השרת מחזיר _id, date: 'YYYY-MM-DD', planDay
+              const dayName = w?.planDay ? `Day ${w.planDay}` : null;
+              // ברשימה אין לנו סיכום סטים בלי לפתוח פרטים → נציג ספירה בסיסית אם קיימת (לא חובה)
               return (
                 <TouchableOpacity
-                  key={w.id}
-                  onPress={() => setActive(w)}
+                  key={String(w._id)}
+                  onPress={() => openDetail(String(w._id))}
                   activeOpacity={0.92}
                   className="bg-card rounded-xl border border-border p-4"
                 >
@@ -164,40 +206,20 @@ export default function TrainingHistory() {
                     <Text className="text-text font-bold text-base">
                       {formatDate(w.date)}
                     </Text>
-                    {!!w.dayName && (
+                    {!!dayName && (
                       <View className="px-3 py-1 rounded-full bg-primary">
                         <Text className="text-onPrimary font-extrabold text-xs">
-                          {w.dayName}
+                          {dayName}
                         </Text>
                       </View>
                     )}
                   </View>
 
+                  {/* אפשר להשאיר את שורת התקציר כמו בדמו, אך ללא ספירת סטים (כי זה דורש פרטים) */}
                   <View className="flex-row gap-4 mt-2">
                     <Text className="text-muted">
-                      Exercises:{" "}
-                      <Text className="text-text font-bold">
-                        {w.entries.length}
-                      </Text>
+                      Status: <Text className="text-text font-bold">closed</Text>
                     </Text>
-                    <Text className="text-muted">
-                      Sets:{" "}
-                      <Text className="text-text font-bold">
-                        {completedSets ?? 0}/{totalSets ?? 0}
-                      </Text>
-                    </Text>
-                  </View>
-
-                  <View className="mt-3 gap-1">
-                    {firstTwo.map((e) => (
-                      <Text key={e.exerciseId} className="text-text">
-                        • {e.name}{" "}
-                        <Text className="text-muted">({e.sets.length} sets)</Text>
-                      </Text>
-                    ))}
-                    {w.entries.length > 2 && (
-                      <Text className="text-muted">… and more</Text>
-                    )}
                   </View>
 
                   <Text className="text-muted mt-3">Tap to view details</Text>
@@ -208,7 +230,7 @@ export default function TrainingHistory() {
         )}
       </ScrollView>
 
-      {/* Details modal – centered dialog */}
+      {/* Details modal */}
       <Modal
         visible={!!active}
         animationType="fade"
@@ -232,59 +254,69 @@ export default function TrainingHistory() {
               </TouchableOpacity>
             </View>
 
-            <View className="flex-row gap-4 mt-3">
-              <Text className="text-muted">
-                Exercises:{" "}
-                <Text className="text-text font-bold">
-                  {active?.entries?.length ?? 0}
-                </Text>
-              </Text>
-              <Text className="text-muted">
-                Sets:{" "}
-                <Text className="text-text font-bold">
-                  {active?.summary?.completedSets ?? 0}/
-                  {active?.summary?.totalSets ?? 0}
-                </Text>
-              </Text>
-            </View>
-
-            <ScrollView className="mt-4">
-              <View className="gap-3">
-                {active?.entries?.map((e) => (
-                  <View
-                    key={e.exerciseId}
-                    className="bg-bg rounded-xl border border-border"
-                  >
-                    <View className="px-4 py-3 border-b border-border">
-                      <Text className="text-text font-bold">{e.name}</Text>
-                      <Text className="text-muted">{e.sets.length} sets</Text>
-                    </View>
-
-                    <View className="px-4 py-2">
-                      {e.sets.map((s, idx) => (
-                        <View
-                          key={idx}
-                          className={`flex-row justify-between py-2 ${
-                            idx > 0 ? "border-t border-border" : ""
-                          }`}
-                        >
-                          <Text className="text-muted">Set {idx + 1}</Text>
-                          <Text className="text-text">
-                            {s.weight ?? 0} kg × {s.reps ?? 0} reps
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                ))}
+            {/* טעינת פרטי אימון */}
+            {loadingDetail ? (
+              <View className="items-center justify-center py-10">
+                <ActivityIndicator size="large" />
+                <Text className="text-muted mt-3">Loading workout…</Text>
               </View>
-              <View className="h-3" />
-            </ScrollView>
+            ) : (
+              <>
+                <View className="flex-row gap-4 mt-3">
+                  <Text className="text-muted">
+                    Exercises:{" "}
+                    <Text className="text-text font-bold">
+                      {active?.entries?.length ?? 0}
+                    </Text>
+                  </Text>
+                  <Text className="text-muted">
+                    Sets:{" "}
+                    <Text className="text-text font-bold">
+                      {active?.summary?.completedSets ?? 0}/
+                      {active?.summary?.totalSets ?? 0}
+                    </Text>
+                  </Text>
+                </View>
+
+                <ScrollView className="mt-4">
+                  <View className="gap-3">
+                    {(active?.entries ?? []).map((e) => (
+                      <View
+                        key={String(e.exerciseId)}
+                        className="bg-bg rounded-xl border border-border"
+                      >
+                        <View className="px-4 py-3 border-b border-border">
+                          <Text className="text-text font-bold">
+                            {e.name || String(e.exerciseId)}
+                          </Text>
+                          <Text className="text-muted">{e.sets.length} sets</Text>
+                        </View>
+
+                        <View className="px-4 py-2">
+                          {e.sets.map((s, idx) => (
+                            <View
+                              key={idx}
+                              className={`flex-row justify-between py-2 ${idx > 0 ? "border-t border-border" : ""}`}
+                            >
+                              <Text className="text-muted">Set {idx + 1}</Text>
+                              <Text className="text-text">
+                                {s.weight ?? 0} kg × {s.reps ?? 0} reps
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                  <View className="h-3" />
+                </ScrollView>
+              </>
+            )}
           </View>
         </View>
       </Modal>
-      <BottomTabs role={20} currentHref="" />
-      
+
+      <BottomTabs role={isCoachView ? 30 : 20} currentHref="/(screens)/tracking/trainingHistory" />
     </View>
   );
 }

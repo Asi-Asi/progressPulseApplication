@@ -336,7 +336,7 @@ export async function listHistoryDb(userId, { from, to, skip = 0, limit = 20 }) 
 
         const items = await col
             .find(q)
-            .sort({ date: -1, startedAt: -1 })
+            .sort({ date: -1, _id: -1 })
             .skip(Number(skip))
             .limit(Number(limit))
             .toArray();

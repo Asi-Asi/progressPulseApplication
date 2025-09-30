@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import AppLogo from "../../../assets/components/ui/AppLogo";
 import BottomTabs from "../../../assets/components/navigation/BottomTabs";
 import { formatDateEN, confirmAction } from "../../../assets/components/screens/coach/coach.helpers";
@@ -19,8 +19,10 @@ import {
   getCoachCode, rotateCoachCode,
   listJoinRequests, approveJoinRequest, rejectJoinRequest,
   listSubscribers as apiListSubscribers, revokeSubscriber,
-  getTraineeHistory // (reserved for navigation)
+  getTraineeHistory, getTraineeWorkout  
 } from "../../../assets/api/coach.api";
+
+import { listHistory, getWorkoutById } from "../../../assets/api/workouts.api";
 
 // Extracted components
 import CoachCodeCard from "../../../assets/components/screens/coach/CoachCodeCard";
@@ -120,8 +122,8 @@ export default function CoachScreen() {
 
   const goToHistory = (s) => {
     router.push({
-      pathname: "/(screens)/tracking/training history",
-      params: { userId: s.id, userName: s.name },
+      pathname: "/(screens)/tracking/trainingHistory",
+      params: { traineeId: s.id, traineeName: s.name },
     });
   };
 

@@ -191,18 +191,27 @@ export async function findSubscribersByCoach(coachId, { limit = 50, skip = 0 } =
     try {
         client = await MongoClient.connect(process.env.CONNECTION_STRING);
         const db = client.db(process.env.DB_NAME);
+
         const items = await db.collection(COLL).aggregate([
+        // רק מאושרים של המאמן
         { $match: { coachId: String(coachId), status: LinkStatus.APPROVED } },
+
+        // מיון בסיסי (לא קריטי כי נחליף בהמשך ל"סידור" לפי אימון אחרון,
+        // אבל נשאיר עקביות)
         { $sort: { updatedAt: -1 } },
+
         { $skip: Number(skip) },
         { $limit: Number(limit) },
 
+        // המרת traineeId (string) ל-ObjectId עבור ה-lookup
         { $addFields: {
             traineeObjId: {
                 $convert: { input: "$traineeId", to: "objectId", onError: null, onNull: null }
             }
-        }},
+            }
+        },
 
+        // הצטרפות ל-Users כדי להביא פרטים להצגה
         {
             $lookup: {
             from: USERS,
@@ -213,6 +222,31 @@ export async function findSubscribersByCoach(coachId, { limit = 50, skip = 0 } =
         },
         { $unwind: { path: "$trainee", preserveNullAndEmptyArrays: true } },
 
+        // === להצמיד אימון סגור אחרון מה-Workouts ===
+        {
+            $lookup: {
+            from: "Workouts",
+            let: { uid: "$traineeObjId" },
+            pipeline: [
+                { $match: {
+                    $expr: {
+                    $and: [
+                        { $eq: ["$userId", "$$uid"] },
+                        { $eq: ["$status", "closed"] }
+                    ]
+                    }
+                }
+                },
+                // חשוב: מיון "האחרון למעלה" תואם לקליינט/היסטוריה
+                { $sort: { date: -1, _id: -1 } },
+                { $limit: 1 },
+                { $project: { _id: 0, date: 1 } }
+            ],
+            as: "lastWorkout"
+            }
+        },
+
+        // שדה נגזר lastWorkoutDate
         {
             $addFields: {
             traineeFirstName: "$trainee.firstName",
@@ -224,13 +258,20 @@ export async function findSubscribersByCoach(coachId, { limit = 50, skip = 0 } =
                 input: { $concat: [
                     { $ifNull: ["$trainee.firstName", ""] }, " ",
                     { $ifNull: ["$trainee.lastName",  ""] }
-                ]}
+                ] }
                 }
+            },
+            lastWorkoutDate: {
+                $ifNull: [ { $arrayElemAt: ["$lastWorkout.date", 0] }, null ]
             }
             }
         },
 
-        { $project: { trainee: 0, traineeObjId: 0 } }
+        // לא להחזיר שדות עזר
+        { $project: { trainee: 0, traineeObjId: 0, lastWorkout: 0 } },
+
+        // מיון סופי להצגה: לפי אימון אחרון (חדש למעלה), אח"כ בשם
+        { $sort: { lastWorkoutDate: -1, traineeName: 1, _id: 1 } }
         ]).toArray();
 
         return items;
