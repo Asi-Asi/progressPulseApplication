@@ -70,40 +70,66 @@ export async function removeExercise(req, res, next) {
     } catch (err) { next(err); }
 }
 
-export async function addSet(req,res,next){
-    const userId = req.user._id; const { sessionId, exerciseId } = req.params;
-    const { reps, weight } = req.body||{}; const e = validateSetPayload({ reps, weight }); if(e) return res.status(400).json({ message:e });
-    try{
-        const val = await addSetDb(userId, sessionId, exerciseId, { reps, weight });
-        if (val === 'CLOSED') return res.status(409).json({ message: 'Session is closed' });
-        if (val === 'NO_EX')  return res.status(404).json({ message:'Exercise not in session' });
-        if (!val)             return res.status(404).json({ message:'Session not found' });
-        res.json(val);
-    } catch(err){ next(err); }
+export async function addSet(req, res) {
+    try {
+        const { sessionId, exerciseId } = req.params;
+        const reps   = Number(req.body?.reps);
+        const weight = Number(req.body?.weight);
+
+        const err = validateSetPayload({ reps, weight });
+        if (err) return res.status(400).json({ message: err });
+
+        const doc = await addSetDb(req.user._id, sessionId, exerciseId, { reps, weight });
+        if (doc === null)   return res.status(404).json({ message: 'Session not found' });
+        if (doc === 'CLOSED') return res.status(409).json({ message: 'Session already closed' });
+        if (doc === 'NO_EX')  return res.status(404).json({ message: 'Exercise not found' });
+
+        return res.json(doc);
+    } catch (e) {
+        return res.status(500).json({ message: 'Add set failed' });
+    }
 }
 
-export async function updateSet(req,res,next){
-    const userId = req.user._id; const { sessionId, exerciseId, setNumber } = req.params;
-    const { reps, weight } = req.body||{}; const e = validateSetPayload({ reps, weight }); if(e) return res.status(400).json({ message:e });
-    try{
-        const val = await updateSetDb(userId, sessionId, exerciseId, Number(setNumber), { reps, weight });
-        if (val === 'CLOSED') return res.status(409).json({ message: 'Session is closed' });
-        if(val==='NO_EX') return res.status(404).json({ message:'Exercise not in session' });
-        if(val==='NO_SET') return res.status(404).json({ message:'Set not found' });
-        if(!val) return res.status(404).json({ message:'Session not found or not open' });
-        res.json(val);
-    } catch(err){ next(err); }
+export async function updateSet(req, res) {
+    try {
+        const { sessionId, exerciseId } = req.params;
+        const setNumber = Number(req.params.setNumber); // <<< חשוב!
+        const reps   = Number(req.body?.reps);
+        const weight = Number(req.body?.weight);
+
+        const err = validateSetPayload({ reps, weight });
+        if (err) return res.status(400).json({ message: err });
+        if (!Number.isInteger(setNumber) || setNumber < 1)
+        return res.status(400).json({ message: 'Bad setNumber' });
+
+        const doc = await updateSetDb(req.user._id, sessionId, exerciseId, setNumber, { reps, weight });
+        if (doc === null)     return res.status(404).json({ message: 'Session not found' });
+        if (doc === 'CLOSED') return res.status(409).json({ message: 'Session already closed' });
+        if (doc === 'NO_EX')  return res.status(404).json({ message: 'Exercise not found' });
+        if (doc === 'NO_SET') return res.status(404).json({ message: 'Set not found' });
+
+        return res.json(doc);
+    } catch (e) {
+        return res.status(500).json({ message: 'Update set failed' });
+    }
 }
 
-export async function removeSet(req,res,next){
-    const userId = req.user._id; const { sessionId, exerciseId, setNumber } = req.params;
-    try{
-        const val = await removeSetDb(userId, sessionId, exerciseId, Number(setNumber));
-        if (val === 'CLOSED') return res.status(409).json({ message: 'Session is closed' });
-        if(val==='NO_EX') return res.status(404).json({ message:'Exercise not in session' });
-        if(!val) return res.status(404).json({ message:'Session not found or not open' });
-        res.json(val);
-    } catch(err){ next(err); }
+export async function removeSet(req, res) {
+    try {
+        const { sessionId, exerciseId } = req.params;
+        const setNumber = Number(req.params.setNumber); // <<< חשוב!
+        if (!Number.isInteger(setNumber) || setNumber < 1)
+        return res.status(400).json({ message: 'Bad setNumber' });
+
+        const doc = await removeSetDb(req.user._id, sessionId, exerciseId, setNumber);
+        if (doc === null)     return res.status(404).json({ message: 'Session not found' });
+        if (doc === 'CLOSED') return res.status(409).json({ message: 'Session already closed' });
+        if (doc === 'NO_EX')  return res.status(404).json({ message: 'Exercise not found' });
+
+        return res.json(doc);
+    } catch (e) {
+        return res.status(500).json({ message: 'Remove set failed' });
+    }
 }
 
 export async function closeSessionWithResults(req,res,next){

@@ -65,10 +65,27 @@ export function removeSet({ token, sessionId, exerciseId, setNumber }) {
 }
 
 export async function discardSession({ token, sessionId }) {
-  return request(`/api/workouts/session/${sessionId}/discard`, {
+  const res = await fetch(`${API_URL}/api/workouts/sessions/${sessionId}/discard`, {
     method: "POST",
-    token,
+    headers: { Authorization: `Bearer ${token}` },
   });
+
+  // שרת מחזיר 204 No Content כשהצליח — זה תקין
+  if (res.status === 204) return true;
+
+  // אם חזר משהו אחר ולא ok — נזרוק הודעת שגיאה קריאה
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const t = await res.text();
+      if (t) {
+        const j = JSON.parse(t);
+        if (j?.message) msg = j.message;
+      }
+    } catch {}
+    throw new Error(msg);
+  }
+  return true;
 }
 
 

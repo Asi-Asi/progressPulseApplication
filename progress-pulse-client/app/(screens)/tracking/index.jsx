@@ -15,7 +15,7 @@ import {
   getTodaySession, createSession, getSessionView,
   addExercise as apiAddExercise, removeExercise as apiRemoveExercise,
   addSet as apiAddSet, updateSet as apiUpdateSet, removeSet as apiRemoveSet,
-  closeSession as apiCloseSession,
+  closeSession as apiCloseSession, discardSession as apiDiscardSession,
 } from "../../../assets/api/workouts.api";
 
 import { safeAlert } from "../../../assets/utils/tracking";
@@ -42,6 +42,8 @@ export default function TrackWorkout() {
   const [selectedDayId, setSelectedDayId] = useState(null); 
   const [starting, setStarting] = useState(false);          // ספינר בזמן פתיחה
   const [showPicker, setShowPicker] = useState(true);       // הסתרת ה-DayPicker אחרי START
+  const [refreshing, setRefreshing] = useState(false);
+  const [mutating, setMutating] = useState(false);   // ספינר לפעולות עדכון (הוספה/סטים)
 
   // Load token
   useEffect(() => {
@@ -109,7 +111,6 @@ export default function TrackWorkout() {
     try {
 
       console.log("[TRACK] refreshView() -> sessionId:", sessionId);
-
       const { session: sess, maxByExercise: pr } = await getSessionView({ token, sessionId });
       setSession(sess);
       setMaxByExercise(pr || {});
@@ -122,6 +123,12 @@ export default function TrackWorkout() {
     }
   }
 
+  async function refreshWithSpinner(sessionId) {
+    setRefreshing(true);
+    try { await refreshView(sessionId); }
+    finally { setRefreshing(false); }
+  }
+
   async function onStartSessionForDay(dayNumber) {
     if (!token) return safeAlert("Missing token");
     const planId = planMeta?._id || planMeta?.planId || planMeta?.id;
@@ -129,11 +136,26 @@ export default function TrackWorkout() {
     try {
       console.log("[TRACK] onStartSessionForDay() -> dayNumber:", dayNumber, "| planId:", planMeta?._id || planMeta?.planId || planMeta?.id);
       setStarting(true);
-      setShowPicker(false); 
+     // לא מסתירים לפני שהכול הצליח; נשאיר גלוי עד שנפתח סשן בהצלחה
+     // אם יש סשן פתוח ליום אחר – לזרוק אותו לפני שפותחים חדש
+      if (
+        session &&
+        session.status === "open" &&
+        String(session.planDay) !== String(dayNumber)
+      ) {
+        console.log("[TRACK] Discarding previous open session:", session._id, " (day", session.planDay, ")");
+        await apiDiscardSession({ token, sessionId: session._id });
+        setSession(null); // נקה state מקומי
+        setPickerOpen(false);
+      }
       const s = await createSession({ token, fromPlanId: planId, planDay: dayNumber });
       setSession(s);
       await refreshView(s._id);
       console.log("[TRACK] started session:", { _id: s?._id, status: s?.status, planDay: s?.planDay });
+
+      setSelectedDayId(String(dayNumber));
+      // עכשיו אפשר להסתיר את ה-picker
+      setShowPicker(false);
 
     } catch (e) {
       setShowPicker(true);
@@ -159,12 +181,17 @@ export default function TrackWorkout() {
     return safeAlert("Start a session", "Pick a day and tap Start/Resume first.");
   }
   try {
-    const updated = await apiAddExercise({ token, sessionId: target._id, exerciseId });
-    setSession(updated);
-    console.log("[TRACK] onAddExercise -> OK. exCount now:", updated?.exercises?.length ?? 0);
+    setMutating(true);
+    // שליחה לשרת
+    await apiAddExercise({ token, sessionId: target._id, exerciseId });
+    // רענון מהשרת עם ספינר קצר
+    await refreshView(target._id);
+    console.log("[TRACK] onAddExercise -> OK (refreshed)");    
   } catch (e) {
     console.log("[TRACK] onAddExercise -> FAILED:", e?.message, e);
     safeAlert("Add exercise failed", e?.message || "");
+  }finally{
+    setMutating(false);
   }
 }
 
@@ -177,34 +204,84 @@ export default function TrackWorkout() {
 
   async function onAddSet(exerciseId) {
     try {
+      setMutating(true);
       const updated = await apiAddSet({ token, sessionId: session._id, exerciseId, reps: 0, weight: 0 });
-      setSession(updated);
-    } catch (e) { safeAlert("Add set failed", e?.message || ""); }
+      await refreshView(session._id);
+    } catch (e) { safeAlert("Add set failed", e?.message || "");
+
+    }finally{
+      setMutating(false);
+    }
   }
 
-  async function onUpdateSet(exerciseId, setNumber1based, reps, weight) {
+  async function onUpdateSet(exerciseId, idx0, repsMaybe, weightMaybe) {
     try {
-      const updated = await apiUpdateSet({
-        token, sessionId: session._id, exerciseId,
-        setNumber: setNumber1based, reps, weight
+      const ex = (session?.exercises || []).find(e => String(e.exerciseId) === String(exerciseId));
+      const idx = Math.max(0, Number(idx0 ?? 0));      
+      const cur = ex?.sets?.[idx] || {};
+
+      const reps   = repsMaybe   !== undefined && repsMaybe   !== "" ? Number(repsMaybe)   : Number(cur.reps ?? 0);
+      const weight = weightMaybe !== undefined && weightMaybe !== "" ? Number(weightMaybe) : Number(cur.weight ?? 0);
+
+      if (!Number.isFinite(reps)   || reps   < 0) throw new Error("Bad reps");
+      if (!Number.isFinite(weight) || weight < 0) throw new Error("Bad weight");
+
+      const setNumber = idx + 1;  
+
+      await apiUpdateSet({
+        token,
+        sessionId: session._id,
+        exerciseId,
+        setNumber,
+        reps,
+        weight,
+      });
+      await refreshView(session._id);
+    } catch (e) {
+      safeAlert("Update set failed", e?.message || "");
+    }
+  }
+
+  async function onRemoveSet(exerciseId, idx0) {
+    try {
+      const setNumber = (Number(idx0 ?? 0) + 1);  
+      const updated = await apiRemoveSet({
+        token,
+        sessionId: session._id,
+        exerciseId,
+        setNumber,
       });
       setSession(updated);
-    } catch (e) { safeAlert("Update set failed", e?.message || ""); }
+    } catch (e) {
+      safeAlert("Remove set failed", e?.message || "");
+    }
   }
 
-  async function onRemoveSet(exerciseId, setNumber1based) {
-    try {
-      const updated = await apiRemoveSet({ token, sessionId: session._id, exerciseId, setNumber: setNumber1based });
-      setSession(updated);
-    } catch (e) { safeAlert("Remove set failed", e?.message || ""); }
-  }
+
 
   async function onFinish() {
+    const target = selectedSession || session;
+    if (!target?._id) {
+      return safeAlert("Start a session", "Pick a day and tap Start/Resume first.");
+    }
     try {
-      const closed = await apiCloseSession({ token, sessionId: session._id });
-      setSession(closed); // status: 'closed'
+      setMutating(true);
+      await apiCloseSession({ token, sessionId: target._id });
+      await refreshView(target._id); // סנכרון מצב הסשן ל-"closed"
+      setShowPicker(true);           // מחזיר את ה-picker אחרי סגירה
       safeAlert("Workout finished", "Saved to history.");
-    } catch (e) { safeAlert("Finish failed", e?.message || ""); }
+    } catch (e) {
+      // אם כבר נסגר/לא נמצא – נרענן ונעדכן את המשתמש בעדינות
+      if (e?.status === 404 || e?.status === 409) {
+        await refreshView(target._id);
+        setShowPicker(true);
+        safeAlert("Session already finished", "I refreshed your view.");
+      } else {
+        safeAlert("Finish failed", e?.message || "");
+      }
+    } finally {
+      setMutating(false);
+    }
   }
 
 
@@ -253,6 +330,33 @@ useEffect(() => {
   console.log("[TRACK] session check => planDay:", session?.planDay, "| selectedDayId:", selectedDayId, "| match:", match);
 }, [session, selectedDayId]);
 
+
+
+// מיפוי exerciseId -> name
+const exNameById = useMemo(() => {
+    const m = {};
+    (planMeta?.days ?? []).forEach(day => {
+      const arr = day.items ?? day.exercises ?? [];
+      arr.forEach(it => {
+        if (it?.exerciseId) m[String(it.exerciseId)] = it.name ?? "";
+      });
+    });
+    return m;
+  }, [planMeta]);
+
+
+
+  useEffect(() => {
+  if (session?.status === "open") {
+    setSelectedDayId(String(session.planDay));
+    setShowPicker(true);
+  }
+}, [session?.status]);
+
+const addDisabled = !selectedSession || starting || mutating;
+
+  //################################################################################################//
+  //################################################################################################//
   return (
     <View className="flex-1 bg-bg">
       <Stack.Screen
@@ -281,7 +385,7 @@ useEffect(() => {
       </View>
 
       {/* Day picker (from plan) */}
-      {(!selectedSession && showPicker) && (
+      {(showPicker) && (
         <>
           <DayPicker
             days={uiDays}
@@ -298,6 +402,8 @@ useEffect(() => {
                   try {
                     setStarting(true);
                     await refreshView(session._id);  // טען מצב עדכני
+                    setSelectedDayId(String(session.planDay));
+                    setShowPicker(false);
                   } finally {
                     setStarting(false);
                   }
@@ -313,7 +419,7 @@ useEffect(() => {
                   <Text className="text-onPrimary font-extrabold">
                     Resume session — Day {session?.planDay}
                   </Text>
-                )}
+                )} 
               </TouchableOpacity>
             ) : (
               // אחרת – START ליום שנבחר
@@ -350,26 +456,31 @@ useEffect(() => {
           <View className="flex-row items-center justify-between px-4 py-3">
             <Text className="text-text font-extrabold">Add exercise</Text>
             <TouchableOpacity
-              onPress={() => setPickerOpen(true)}
-              className="p-2 rounded-lg bg-field border border-fieldBorder"
+              onPress={() => !addDisabled && setPickerOpen(true)}
+              disabled={addDisabled}
+              className={`p-2 rounded-lg border border-fieldBorder ${addDisabled ? "bg-card opacity-60" : "bg-field"}`}
             >
+            {mutating ? (
+              <ActivityIndicator size="small" />
+            ) : (
               <MaterialCommunityIcons name="plus" size={20} />
+            )}
             </TouchableOpacity>
           </View>
 
           <LogTable
             items={(selectedSession?.exercises || []).map(e => ({
               exerciseId: e.exerciseId,
-              name: `Exercise ${String(e.exerciseId).slice(-4)}`,
+              name: exNameById[String(e.exerciseId)] || `Exercise ${String(e.exerciseId).slice(-4)}`,
               sets: e.sets || [],
             }))}
-            disabled={!selectedSession}
+            disabled={!selectedSession || refreshing}
             onAddSet={(exerciseId) => onAddSet(exerciseId)}
-            onRemoveSet={(exerciseId, idx) => onRemoveSet(exerciseId, idx + 1)}
-            onUpdateSet={(exerciseId, idx, field, value) => {
+            onRemoveSet={(exerciseId, idx1) => onRemoveSet(exerciseId, idx1)}
+            onUpdateSet={(exerciseId, idx1, field, value) => {
               const reps    = field === "reps"    ? Number(value) : undefined;
               const weight  = field === "weight"  ? Number(value) : undefined;
-              onUpdateSet(exerciseId, idx + 1, reps ?? undefined, weight ?? undefined);
+              onUpdateSet(exerciseId, idx1, reps ?? undefined, weight ?? undefined);
             }}
             onRemoveExercise={(exerciseId) => onRemoveExercise(exerciseId)}
           />
@@ -381,7 +492,7 @@ useEffect(() => {
       {/* Finish button */}
       <FinishButton
         offsetBottom={BTN_OFFSET}
-        disabled={finishDisabled}
+        disabled={finishDisabled || mutating}
         onPress={onFinish}
       />
 
@@ -391,12 +502,16 @@ useEffect(() => {
         onClose={() => setPickerOpen(false)}
         day={currentDay}
         selectedIds={new Set((selectedSession?.exercises || []).map(e => String(e.exerciseId)))}
-        onPick={(exerciseId) => {
+        onPick={async (exerciseId) => {
 
           console.log("[TRACK] pick exercise from plan:", { exerciseId, forDay: selectedDayId, sessionId: selectedSession?._id || session?._id || null });
 
           if (!exerciseId) return;
-          onAddExercise(exerciseId);
+          if (!selectedSession) {
+            safeAlert("Start a session", "Pick a day and tap Start/Resume first.");
+            return;
+          }
+          await onAddExercise(exerciseId);
           setPickerOpen(false);
         }}  
       />
