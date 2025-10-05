@@ -13,15 +13,7 @@ const PORT = process.env.PORT || 5500;
 const server = express();
 
 //לאפשר גישה לשרת מכתובת אחרת
-server.use(
-    cors({
-        origin: [
-        "http://localhost:8081/",
-        "http://localhost:19006/",
-        "https://progresspulseapplication.onrender.com/"
-        ],
-    })
-);
+server.use(cors()); 
 
 //
 server.set('trust proxy', 1)
