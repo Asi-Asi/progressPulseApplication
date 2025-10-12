@@ -9,7 +9,7 @@ import BottomTabs from "../../../assets/components/navigation/BottomTabs";
 
 import { getMyPlan } from "../../../assets/api/plan.api";
 import { listHistory, getWorkoutById } from "../../../assets/api/workouts.api";
-import { getTraineeHistory, getTraineeWorkout } from "../../../assets/api/coach.api";
+import { getTraineeHistory, getTraineeWorkout, getTraineePlan } from "../../../assets/api/coach.api";
 
 import { safeAlert } from "../../../assets/utils/tracking";
 
@@ -68,7 +68,9 @@ export default function TrainingHistory() {
     if (!token) return;
     (async () => {
       try {
-        const p = await getMyPlan({ token });
+        const p = isCoachView
+          ? await getTraineePlan({ token, traineeId })
+          : await getMyPlan({ token });
         setPlan(p || null);
         setNameById(buildNameMap(p || null));
       } catch {
@@ -76,7 +78,7 @@ export default function TrainingHistory() {
         setNameById({});
       }
     })();
-  }, [token]);
+  }, [token, isCoachView, traineeId]);
 
   const fetchHistory = useCallback(async () => {
     if (!token) return;
@@ -127,7 +129,7 @@ export default function TrainingHistory() {
       // session.status === 'closed', session.planDay, session.exercises: [{exerciseId, sets:[{setNumber,reps,weight}]}]
       const entries = (full?.exercises || []).map(e => ({
         exerciseId: e.exerciseId,
-        name: nameById[String(e.exerciseId)] || `Exercise ${String(e.exerciseId).slice(-4)}`,
+        name: (e.name ?? nameById[id]) || `Exercise ${id.slice(-4)}`,
         sets: (e.sets || []).map(s => ({ weight: s?.weight ?? 0, reps: s?.reps ?? 0 })),
       }));
 

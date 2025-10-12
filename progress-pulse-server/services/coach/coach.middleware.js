@@ -2,11 +2,7 @@
 import { ObjectId } from 'mongodb';
 import { findActiveApprovedForTrainee } from './coach.links.db.js';
 
-/**
- * Guard: ensures the requesting coach has an APPROVED link with the given trainee.
- * Use after requireAuth + requireCoach.
- * @param {string} traineeIdParam - name of the route param to read (default: 'traineeId')
- */
+
 export function requireCoachAccess(traineeIdParam = 'traineeId') {
     return async (req, res, next) => {
         try {

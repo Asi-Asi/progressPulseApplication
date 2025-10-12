@@ -22,6 +22,8 @@ import {
     traineeRevokeMyCoach,
 } from './coach.links.db.js';
 
+import { getTraineePlanWithNames, getTraineeWorkoutWithNames } from './coach.read.db.js';
+
 // If your workouts db uses different names — adjust the imports accordingly.
 import {
     listHistoryDb,   // (filter, {limit, skip}) -> Workout[]
@@ -327,12 +329,10 @@ export async function getTraineeWorkoutController(req, res) {
         return res.status(400).json({ message: 'Invalid workoutId' });
         }
 
-        const w = await getSession(traineeId,workoutId);
-        if (!w || String(w.userId) !== String(traineeId)) {
-        return res.status(404).json({ message: 'Workout not found' });
-        }
+        const w = await getTraineeWorkoutWithNames(traineeId, workoutId);
+        if (!w) return res.status(404).json({ message: 'Workout not found' });
+        return res.json(w);
 
-        return res.json(w); // strictly read-only
     } catch (e) {
         console.error('getTraineeWorkoutController error:', e);
         return res.status(500).json({ message: 'Internal server error' });
@@ -380,5 +380,20 @@ async function enrichWithTrainee(usersIds, items) {
         });
     } finally {
         if (client) await client.close();
+    }
+}
+
+
+export async function getTraineePlanController(req, res) {
+    try {
+        const { traineeId } = req.params;
+        if (!ObjectId.isValid(String(traineeId))) {
+        return res.status(400).json({ message: 'Invalid traineeId' });
+        }
+        const plan = await getTraineePlanWithNames(traineeId);
+        return res.json(plan); // may be null
+    } catch (e) {
+        console.error('getTraineePlanController error:', e);
+        return res.status(500).json({ message: 'Internal server error' });
     }
 }

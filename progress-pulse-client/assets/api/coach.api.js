@@ -38,3 +38,8 @@ export const getTraineeHistory = ({ token, traineeId, limit = 20, skip = 0, from
 
 export const getTraineeWorkout = ({ token, traineeId, workoutId }) =>
   request(`/api/coach/trainees/${traineeId}/workouts/${workoutId}`, { token });
+
+
+
+export const getTraineePlan = ({ token, traineeId }) =>
+  request(`/api/coach/trainees/${traineeId}/plan`, { token });

@@ -6,7 +6,7 @@ import {
     joinCoachByCode, getMyCoachStatus, leaveMyCoach,
     getCoachCodeController, rotateCoachCodeController,
     listJoinRequests, approveJoinRequest, rejectJoinRequest,
-    listSubscribers, revokeSubscriber,getTraineeHistoryController, getTraineeWorkoutController
+    listSubscribers, revokeSubscriber,getTraineeHistoryController, getTraineeWorkoutController, getTraineePlanController
 } from './coach.controller.js';
 
 const coachRouter = Router();
@@ -43,6 +43,11 @@ coachRouter
     .get('/trainees/:traineeId/workouts/:workoutId',
         requireAuth, requireCoach, requireCoachAccess('traineeId'),
         getTraineeWorkoutController
+    )
+
+    .get('/trainees/:traineeId/plan',
+        requireAuth, requireCoach, requireCoachAccess('traineeId'),
+        getTraineePlanController
     )
 
 
