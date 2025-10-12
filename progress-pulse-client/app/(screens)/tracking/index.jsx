@@ -260,8 +260,15 @@ export default function TrackWorkout() {
     try {
       setMutating(true);
       await apiCloseSession({ token, sessionId: target._id });
+
       await refreshView(target._id); // סנכרון מצב הסשן ל-"closed"
-      setShowPicker(true);           // מחזיר את ה-picker אחרי סגירה
+
+
+       // === נקה את ה־UI כדי לרוקן את הטבלה מיד ===
+      setSession(null);            // לא יישאר סשן נבחר => LogTable ריק
+      setMaxByExercise({});        // אופציונלי: איפוס PRs מוצגים
+      setSelectedDayId(null);      // אופציונלי: איפוס יום נבחר
+      setShowPicker(true);         // מחזיר את ה־DayPicker
       safeAlert("Workout finished", "Saved to history.");
     } catch (e) {
       // אם כבר נסגר/לא נמצא – נרענן ונעדכן את המשתמש בעדינות
@@ -285,7 +292,9 @@ export default function TrackWorkout() {
   const BTN_OFFSET = TAB_CARD_HEIGHT + TAB_OUTER_MARGIN + Math.max(insets.bottom, 12) + EXTRA_GAP;
 
   const selectedSession = useMemo(
-    () => (session && String(session.planDay) === String(selectedDayId) ? session : null),
+    () => (session &&
+          session.status === "open" &&
+          String(session.planDay) === String(selectedDayId) ? session : null),
     [session, selectedDayId]
   );
 
