@@ -110,15 +110,10 @@ export default function TrackWorkout() {
     if (!token || !sessionId) return;
     try {
 
-      console.log("[TRACK] refreshView() -> sessionId:", sessionId);
       const { session: sess, maxByExercise: pr } = await getSessionView({ token, sessionId });
       setSession(sess);
       setMaxByExercise(pr || {});
 
-      console.log("[TRACK] refreshView() -> done:", {
-        sessId: sess?._id, status: sess?.status, planDay: sess?.planDay,
-        exCount: sess?.exercises?.length ?? 0
-      });
     } catch (e) {
     }
   }
@@ -134,7 +129,6 @@ export default function TrackWorkout() {
     const planId = planMeta?._id || planMeta?.planId || planMeta?.id;
     if (!planId) return safeAlert("Missing plan", "Finish your plan first.");
     try {
-      console.log("[TRACK] onStartSessionForDay() -> dayNumber:", dayNumber, "| planId:", planMeta?._id || planMeta?.planId || planMeta?.id);
       setStarting(true);
      // לא מסתירים לפני שהכול הצליח; נשאיר גלוי עד שנפתח סשן בהצלחה
      // אם יש סשן פתוח ליום אחר – לזרוק אותו לפני שפותחים חדש
@@ -143,7 +137,6 @@ export default function TrackWorkout() {
         session.status === "open" &&
         String(session.planDay) !== String(dayNumber)
       ) {
-        console.log("[TRACK] Discarding previous open session:", session._id, " (day", session.planDay, ")");
         await apiDiscardSession({ token, sessionId: session._id });
         setSession(null); // נקה state מקומי
         setPickerOpen(false);
@@ -151,7 +144,6 @@ export default function TrackWorkout() {
       const s = await createSession({ token, fromPlanId: planId, planDay: dayNumber });
       setSession(s);
       await refreshView(s._id);
-      console.log("[TRACK] started session:", { _id: s?._id, status: s?.status, planDay: s?.planDay });
 
       setSelectedDayId(String(dayNumber));
       // עכשיו אפשר להסתיר את ה-picker
@@ -169,13 +161,7 @@ export default function TrackWorkout() {
 
   async function onAddExercise(exerciseId) {
   const target = selectedSession || session; // ננסה קודם את המתאים ליום
-  console.log("[TRACK] onAddExercise ->", {
-    exerciseId,
-    selectedDayId,
-    targetSessionId: target?._id || null,
-    targetPlanDay: target?.planDay,
-    targetStatus: target?.status
-  });
+  
 
   if (!target?._id) {
     return safeAlert("Start a session", "Pick a day and tap Start/Resume first.");
@@ -186,9 +172,7 @@ export default function TrackWorkout() {
     await apiAddExercise({ token, sessionId: target._id, exerciseId });
     // רענון מהשרת עם ספינר קצר
     await refreshView(target._id);
-    console.log("[TRACK] onAddExercise -> OK (refreshed)");    
   } catch (e) {
-    console.log("[TRACK] onAddExercise -> FAILED:", e?.message, e);
     safeAlert("Add exercise failed", e?.message || "");
   }finally{
     setMutating(false);
@@ -230,14 +214,6 @@ export default function TrackWorkout() {
     if (!Number.isFinite(weight) || weight < 0) throw new Error("Bad weight");
 
 
-    // ===== לוג לפני שליחה =====
-    console.groupCollapsed("[UPDATE_SET] sending");
-    console.log("sessionId:", session?._id);
-    console.log("exerciseId:", String(exerciseId));
-    console.log("setNumber(1-based):", setNumber, "  idx(0-based):", idx);
-    console.log("payload:", { reps, weight });
-    console.log("BEFORE sets (this exercise):", JSON.parse(JSON.stringify(ex?.sets || [])));
-    console.groupEnd();
 
     // שליחה לשרת
     const res = await apiUpdateSet({
@@ -248,26 +224,13 @@ export default function TrackWorkout() {
       reps,
       weight,
     });
-    console.log("[UPDATE_SET] apiUpdateSet() response:", res);
 
     // רענון ה־state המקומי
     await refreshView(session._id);
-
     // כדי לוודא/להדפיס את "אחרי", נקרא במפורש את ה-view (לא נשען על setState הא-סינכרוני)
     const v = await getSessionView({ token, sessionId: session._id });
     const exAfter = (v?.session?.exercises || []).find(e => String(e.exerciseId) === String(exerciseId));
-
-    console.groupCollapsed("[UPDATE_SET] after refresh");
-    console.log("AFTER sets (this exercise):", JSON.parse(JSON.stringify(exAfter?.sets || [])));
-    console.groupEnd();
-
   } catch (e) {
-    console.group("[UPDATE_SET] FAILED");
-    console.log("err.name:", e?.name);
-    console.log("err.message:", e?.message);
-    console.log("err.status:", e?.status);
-    console.log("err.data:", e?.data);
-    console.groupEnd();
     safeAlert("Update set failed", e?.message || "");
   }
 }
@@ -331,25 +294,7 @@ export default function TrackWorkout() {
     session.status === "open" &&
     String(session.planDay) === String(selectedDayId)
   );
-  useEffect(() => {
-  console.log("[TRACK] STATE SNAPSHOT =>",
-    {
-      selectedDayId,
-      session: session ? {
-        _id: session._id,
-        status: session.status,
-        planDay: session.planDay,
-        exCount: session.exercises?.length ?? 0,
-      } : null,
-      selectedSession: selectedSession ? {
-        _id: selectedSession._id,
-        status: selectedSession.status,
-        planDay: selectedSession.planDay,
-        exCount: selectedSession.exercises?.length ?? 0,
-      } : null,
-    }
-  );
-}, [session, selectedDayId, selectedSession]);
+
 
   const finishDisabled = !selectedSession || (selectedSession.exercises || []).length === 0;
 
@@ -357,7 +302,6 @@ export default function TrackWorkout() {
 // השוואה בין יום שנבחר לסשן פתוח
 useEffect(() => {
   const match = session && String(session.planDay) === String(selectedDayId);
-  console.log("[TRACK] session check => planDay:", session?.planDay, "| selectedDayId:", selectedDayId, "| match:", match);
 }, [session, selectedDayId]);
 
 
@@ -532,7 +476,6 @@ const addDisabled = !selectedSession || starting || mutating;
         selectedIds={new Set((selectedSession?.exercises || []).map(e => String(e.exerciseId)))}
         onPick={async (exerciseId) => {
 
-          console.log("[TRACK] pick exercise from plan:", { exerciseId, forDay: selectedDayId, sessionId: selectedSession?._id || session?._id || null });
 
           if (!exerciseId) return;
           if (!selectedSession) {

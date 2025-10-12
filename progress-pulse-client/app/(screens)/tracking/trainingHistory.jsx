@@ -127,11 +127,14 @@ export default function TrainingHistory() {
       : await getWorkoutById({ token, workoutId });
       // התאמות קטנות ל־UI:
       // session.status === 'closed', session.planDay, session.exercises: [{exerciseId, sets:[{setNumber,reps,weight}]}]
-      const entries = (full?.exercises || []).map(e => ({
-        exerciseId: e.exerciseId,
-        name: (e.name ?? nameById[id]) || `Exercise ${id.slice(-4)}`,
-        sets: (e.sets || []).map(s => ({ weight: s?.weight ?? 0, reps: s?.reps ?? 0 })),
-      }));
+      const entries = (full?.exercises || []).map(e => {
+        const id = String(e.exerciseId);
+        return {
+          exerciseId: e.exerciseId,
+          name: (e.name ?? nameById[id]) || `Exercise ${id.slice(-4)}`,
+          sets: (e.sets || []).map(s => ({ weight: s?.weight ?? 0, reps: s?.reps ?? 0 })),
+        };
+      });
 
       const summary = {
         totalSets: entries.reduce((acc, ex) => acc + (ex.sets?.length || 0), 0),
