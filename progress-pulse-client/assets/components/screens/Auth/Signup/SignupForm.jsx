@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Platform, ActivityIndicator } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons'; 
+
 
 const PROD_URL = 'https://progresspulseapplication.onrender.com';
 const DEV_URL  = Platform.select({
@@ -14,13 +16,39 @@ const USE_PROD = true;
 
 const BASE_URL = USE_PROD ? PROD_URL : DEV_URL;
 
-export default function   SignupForm({ onSubmit }) {
-  const [firstName, setFirstName]   = useState('');       
-  const [lastName, setLastName]     = useState('');          
+
+
+// ===== Helpers: validation rules =====
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i;
+
+function validateEmail(v) {
+  if (!v?.trim()) return 'Email is required.';
+  if (!emailRegex.test(v.trim())) return 'Enter a valid email address.';
+  return '';
+}
+
+function validatePassword(v) {
+  if (!v) return 'Password is required.';
+  if (v.length < 8) return 'At least 8 characters.';
+  if (!/[A-Z]/.test(v)) return 'Include at least one uppercase letter.';
+  if (!/[a-z]/.test(v)) return 'Include at least one lowercase letter.';
+  if (!/[0-9]/.test(v)) return 'Include at least one number.';
+  if (!/[^\w\s]/.test(v)) return 'Include at least one symbol.';
+  return '';
+}
+
+export default function SignupForm({ onSubmit }) {
+  const [firstName, setFirstName]   = useState('');
+  const [lastName, setLastName]     = useState('');
   const [gender, setGender]         = useState('');
   const [email, setEmail]           = useState('');        
-  const [password, setPassword]     = useState('');        
-  const [loading, setLoading]       = useState(false);     
+  const [password, setPassword]     = useState('');
+  const [loading, setLoading]       = useState(false); 
+  
+  const [emailErr, setEmailErr]       = useState('');
+  const [passwordErr, setPasswordErr] = useState('');
+
+  const [showPassword, setShowPassword] = useState(false);       
 
   const alertFn = Platform.OS === 'web' ? window.alert : Alert.alert;
 
@@ -36,6 +64,14 @@ export default function   SignupForm({ onSubmit }) {
       alertFn('Missing info', 'Please choose Male or Female.');
       return;
     }
+
+    // Validate email & password
+    const eErr = validateEmail(email);
+    const pErr = validatePassword(password);
+    setEmailErr(eErr);
+    setPasswordErr(pErr);
+    if (eErr || pErr) return;
+
 
     try {
       setLoading(true);
@@ -80,6 +116,16 @@ export default function   SignupForm({ onSubmit }) {
     }
   }
 
+  // Live validation helpers (optional but nice UX)
+  const onEmailChange = (v) => {
+    setEmail(v);
+    if (emailErr) setEmailErr(validateEmail(v)); // re-validate to clear as user fixes it
+  };
+  const onPasswordChange = (v) => {
+    setPassword(v);
+    if (passwordErr) setPasswordErr(validatePassword(v)); // re-validate to clear as user fixes it
+  };
+
   return (
     <>
       {/* First Name */}
@@ -106,7 +152,7 @@ export default function   SignupForm({ onSubmit }) {
         editable={!loading}
       />
 
-      {/* Sex (Male / Female) – styled like inputs */}
+      {/* gender (Male / Female) – styled like inputs */}
       <View className="w-full flex-row gap-3 mb-4">
         <TouchableOpacity
           onPress={() => setGender('male')}
@@ -138,30 +184,58 @@ export default function   SignupForm({ onSubmit }) {
       </View>
 
       {/* Email */}
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Email"
-        placeholderTextColor="#667085"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        textContentType="emailAddress"
-        className="w-full px-4 py-3 rounded-xl mb-4 bg-field border border-fieldBorder text-text"
-        editable={!loading}
-      />
+        {!!emailErr && (
+          <Text className="text-xs text-[#EF4444]">{emailErr}</Text>
+        )}
+      <View className="w-full mb-2">
+        <TextInput
+          value={email}
+          onChangeText={onEmailChange}
+          onEndEditing={() => setEmailErr(validateEmail(email))}
+          placeholder="Email"
+          placeholderTextColor="#667085"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          textContentType="emailAddress"
+          autoCorrect={false}
+          className="w-full px-4 py-3 rounded-xl mb-4 bg-field border border-fieldBorder text-text"
+          editable={!loading}
+        />
+      </View>
 
-      {/* Password */}
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Password"
-        placeholderTextColor="#667085"
-        secureTextEntry
-        autoCapitalize="none"
-        textContentType="password"
-        className="w-full px-4 py-3 rounded-xl mb-6 bg-field border border-fieldBorder text-text"
-        editable={!loading}
-      />
+
+      {/* Password + toggle */}
+
+      {!!passwordErr && (
+        <Text className="text-xs text-[#EF4444]">{passwordErr}</Text>
+      )}
+      <View className="w-full mb-2 relative">
+        <TextInput
+          value={password}
+          onChangeText={onPasswordChange}
+          onEndEditing={() => setPasswordErr(validatePassword(password))}
+          placeholder="Password"
+          placeholderTextColor="#667085"
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          textContentType="password"
+          className="w-full px-4 py-3 rounded-xl bg-field border border-fieldBorder text-text pr-10"
+          editable={!loading}
+        />
+        <TouchableOpacity
+          onPress={() => setShowPassword((prev) => !prev)}
+          className="absolute right-3 top-3.5"
+          accessibilityRole="button"
+          accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+        >
+          <MaterialCommunityIcons
+            name={showPassword ? "eye-off-outline" : "eye-outline"}
+            size={22}
+            color="#667085"
+          />
+        </TouchableOpacity>
+      </View>
+      
 
       {/* Submit */}
       <TouchableOpacity

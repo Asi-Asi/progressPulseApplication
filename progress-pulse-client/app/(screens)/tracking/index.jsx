@@ -275,7 +275,7 @@ export default function TrackWorkout() {
       if (e?.status === 404 || e?.status === 409) {
         await refreshView(target._id);
         setShowPicker(true);
-        safeAlert("Session already finished", "I refreshed your view.");
+        safeAlert("Session already finished");
       } else {
         safeAlert("Finish failed", e?.message || "");
       }
