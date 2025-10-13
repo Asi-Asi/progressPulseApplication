@@ -9,7 +9,8 @@ import {
   Pressable,
   ScrollView,
   Platform,
-  Alert
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter} from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,7 +22,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
-const ROLE_NUMBER = 20; 
 
 export default function BuildWorkoutPlanScreen() {
   const router = useRouter();
@@ -29,35 +29,42 @@ export default function BuildWorkoutPlanScreen() {
 
   const [accessToken, setAccessToken] = useState('');
   const [roleLevel, setRoleLevel] = useState(20);
+  const [initialLoading, setInitialLoading] = useState(true);
 
+
+ // טען תכנית רק כשהטוקן קיים, אין שינויים מקומיים, ועדיין לא נטעןו ימים
   useEffect(() => {
-    (async () => {
-      const [t, r] = await AsyncStorage.multiGet(['token','roleLevel']);
-      setAccessToken(t?.[1] || '');
-      setRoleLevel(Number(r?.[1] || 20));
-    })();
-  }, []);
-
-  // טען תכנית רק כשהטוקן קיים, אין שינויים מקומיים, ועדיין לא נטעןו ימים
-  useEffect(() => {
-    if (!accessToken) return;
-    if (dirty) return;
-    if (days && days.length > 0) return;
-
+    let mounted = true;
     (async () => {
       try {
-        const res = await getMyPlan({ token: accessToken }); // מצופה: { planId?, locked?, days:[...] }
-        if (res && Array.isArray(res.days)) {
-          // חשוב: מעבירים את כל האובייקט כדי לקבל locked מהשרת
-          actions.hydrateFromServer(res);
+        setInitialLoading(true);
+        // ✅ מפתחות עקביים עם שאר האפליקציה
+        const entries = await AsyncStorage.multiGet(['accessToken', 'roleLevel']);
+        const token = entries.find(([k]) => k === 'accessToken')?.[1] || '';
+        const role  = entries.find(([k]) => k === 'roleLevel')?.[1] || '20';
+        if (!mounted) return;
+        setAccessToken(token);
+        setRoleLevel(Number(role) || 20);
+
+        // טען תכנית רק אם אין לוקל-דראפט/ימים ועדיין לא “מלוכלך”
+        const shouldFetchPlan = !!token && !dirty && (!days || days.length === 0);
+        if (shouldFetchPlan) {
+          try {
+            const res = await getMyPlan({ token }); // { days, locked, ... }
+            if (mounted && res && Array.isArray(res.days)) {
+              actions.hydrateFromServer(res);
+            }
+          } catch (e) {
+            if (e?.status !== 404) console.warn('getMyPlan error:', e?.message || e);
+          }
         }
-      } catch (e) {
-        // 404 = אין תכנית קיימת — מתעלמים. כל שגיאה אחרת מדפיסים.
-        if (e.status !== 404) console.warn('getMyPlan error:', e.message || e);
+      } finally {
+        if (mounted) setInitialLoading(false);
       }
     })();
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accessToken]);
+  }, []); // ריצה פעם אחת בכניסה למסך
 
   const [askDaysVisible, setAskDaysVisible] = useState(false);
   const [daysCountDraft, setDaysCountDraft] = useState('');
@@ -103,223 +110,237 @@ export default function BuildWorkoutPlanScreen() {
   }
 
 
-  return (
+  return initialLoading ? (
+    <View className="flex-1 bg-bg">
+      <Stack.Screen
+        options={{
+          headerTitle: () => <AppLogo />,
+          headerTitleAlign: "left",
+          headerStyle: { backgroundColor: "#FDFBFA" },
+        }}
+      />
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator size="large" />
+        <Text className="text-muted mt-3">Loading your plan…</Text>
+      </View>
+    </View>
+  ) : (
     <View className="flex-1 bg-bg">
       {/* Header */}
       <Stack.Screen
         options={{
-          headerTitle: () => <AppLogo/>,
+          headerTitle: () => <AppLogo />,
           headerTitleAlign: "left",
           headerStyle: { backgroundColor: "#FDFBFA" },
         }}
       />
 
-      {/* Master scroll */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 140 }} // space for tabs
-      >
-        <View className="px-5 pt-5">
-          <Text className="text-text text-2xl font-extrabold">Build Workout Plan</Text>
-          <Text className="text-muted mt-1">Create days, add exercises, and lock when ready.</Text>
-        </View>
+        {/* Master scroll */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 140 }} // space for tabs
+        >
+          <View className="px-5 pt-5">
+            <Text className="text-text text-2xl font-extrabold">Build Workout Plan</Text>
+            <Text className="text-muted mt-1">Create days, add exercises, and lock when ready.</Text>
+          </View>
 
-        {/* Top controls */}
-        <View className="px-5 pt-4">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-text font-bold text-lg">Current Plan</Text>
+          {/* Top controls */}
+          <View className="px-5 pt-4">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-text font-bold text-lg">Current Plan</Text>
 
-            <View className="flex-row items-center gap-2">
-              {!planLocked && canFinishPlan ? (
+              <View className="flex-row items-center gap-2">
+                {!planLocked && canFinishPlan ? (
+                  <TouchableOpacity
+                    onPress={handleSavePlan}
+                    className="rounded-xl px-3 py-2 bg-primary"
+                  >
+                    <Text className="text-onPrimary font-bold">Finish Plan</Text>
+                  </TouchableOpacity>
+
+                ) : planLocked ? (
+                  <TouchableOpacity
+                    onPress={actions.unlockPlan}
+                    className="rounded-xl px-3 py-2 bg-card"
+                  >
+                    <Text className="text-text font-bold">Edit Plan</Text>
+                  </TouchableOpacity>
+                ) : null}
+
                 <TouchableOpacity
-                  onPress={handleSavePlan}
-                  className="rounded-xl px-3 py-2 bg-primary"
+                  onPress={onPressPlus}
+                  className="rounded-full p-3 bg-primary"
+                  accessibilityLabel="Start building plan"
                 >
-                  <Text className="text-onPrimary font-bold">Finish Plan</Text>
+                  <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
                 </TouchableOpacity>
-
-              ) : planLocked ? (
-                <TouchableOpacity
-                  onPress={actions.unlockPlan}
-                  className="rounded-xl px-3 py-2 bg-card"
-                >
-                  <Text className="text-text font-bold">Edit Plan</Text>
-                </TouchableOpacity>
-              ) : null}
-
-              <TouchableOpacity
-                onPress={onPressPlus}
-                className="rounded-full p-3 bg-primary"
-                accessibilityLabel="Start building plan"
-              >
-                <MaterialCommunityIcons name="plus" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
 
-        {days.length === 0 ? (
-          <EmptyState onPressPlus={onPressPlus} />
-        ) : (
-          <>
-            {/* Days grid */}
-            <FlatList
-              data={days}
-              keyExtractor={(item) => String(item.id)}
-              numColumns={2}
-              columnWrapperStyle={{ gap: 12, paddingHorizontal: 12 }}
-              contentContainerStyle={{ paddingVertical: 12, gap: 12 }}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <DayCard
-                  day={item}
-                  isSelected={item.id === selectedDayId}
-                  onPress={() => actions.setSelectedDayId(item.id)}
-                />
+          {days.length === 0 ? (
+            <EmptyState onPressPlus={onPressPlus} />
+          ) : (
+            <>
+              {/* Days grid */}
+              <FlatList
+                data={days}
+                keyExtractor={(item) => String(item.id)}
+                numColumns={2}
+                columnWrapperStyle={{ gap: 12, paddingHorizontal: 12 }}
+                contentContainerStyle={{ paddingVertical: 12, gap: 12 }}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <DayCard
+                    day={item}
+                    isSelected={item.id === selectedDayId}
+                    onPress={() => actions.setSelectedDayId(item.id)}
+                  />
+                )}
+              />
+
+              {/* Selected day panel */}
+              {selectedDay && (
+                <View className="bg-card rounded-t-2xl px-4 pb-4">
+                  <View className="flex-row items-center justify-between pt-3 pb-2">
+                    <Text className="text-text font-bold text-lg">
+                      {selectedDay.name} — Exercises
+                    </Text>
+
+                    <View className="flex-row gap-2">
+                      {!planLocked && !dayLocked && selectedDay.exercises.length > 0 ? (
+                        <TouchableOpacity
+                          onPress={() => actions.lockDay(selectedDay.id)}
+                          className="rounded-xl px-3 py-2 bg-primary"
+                        >
+                          <Text className="text-onPrimary font-bold">Finish Day</Text>
+                        </TouchableOpacity>
+                      ) : !planLocked && dayLocked ? (
+                        <TouchableOpacity
+                          onPress={() => actions.unlockDay(selectedDay.id)}
+                          className="rounded-xl px-3 py-2 bg-bg border border-border"
+                        >
+                          <Text className="text-text font-bold">Edit Day</Text>
+                        </TouchableOpacity>
+                      ) : null}
+
+                      <TouchableOpacity
+                        disabled={!canEditSelectedDay}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/categories',
+                            params: { targetDayId: String(selectedDayId) },
+                          })
+                        }
+                        className={`rounded-xl px-3 py-2 bg-primary ${canEditSelectedDay ? 'opacity-100' : 'opacity-50'}`}
+                      >
+                        <Text className="text-onPrimary font-bold">Add Exercise</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {selectedDay.exercises.length === 0 ? (
+                    <Text className="text-muted">No exercises for this day — tap “Add Exercise”.</Text>
+                  ) : (
+                    <View className="mt-2">
+                      {selectedDay.exercises.map((ex, idx) => (
+                        <ExerciseRow
+                          key={`${ex.id}-${idx}`}
+                          index={idx}
+                          exercise={ex}
+                          sets={ex.sets ?? 1}
+                          editable={canEditSelectedDay}
+                          onInc={() => actions.incrementSets(selectedDayId, idx, +1)}
+                          onDec={() => actions.incrementSets(selectedDayId, idx, -1)}
+                          onRemove={() => removeExerciseFromSelectedDay(idx)}
+                        />
+                      ))}
+                    </View>
+                  )}
+                </View>
               )}
-            />
+            </>
+          )}
+        </ScrollView>
 
-            {/* Selected day panel */}
-            {selectedDay && (
-              <View className="bg-card rounded-t-2xl px-4 pb-4">
-                <View className="flex-row items-center justify-between pt-3 pb-2">
-                  <Text className="text-text font-bold text-lg">
-                    {selectedDay.name} — Exercises
-                  </Text>
+        {/* Modal: how many days? */}
+              <Modal
+                visible={askDaysVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setAskDaysVisible(false)} // Android back
+              >
+          <View className="flex-1 items-center justify-center px-6 bg-black/60">
+            <View className="w-full rounded-2xl p-5 bg-card">
+              <Text className="text-text text-center font-bold mb-4 text-lg">
+                How many days do you train per week?
+              </Text>
 
-                  <View className="flex-row gap-2">
-                    {!planLocked && !dayLocked && selectedDay.exercises.length > 0 ? (
-                      <TouchableOpacity
-                        onPress={() => actions.lockDay(selectedDay.id)}
-                        className="rounded-xl px-3 py-2 bg-primary"
-                      >
-                        <Text className="text-onPrimary font-bold">Finish Day</Text>
-                      </TouchableOpacity>
-                    ) : !planLocked && dayLocked ? (
-                      <TouchableOpacity
-                        onPress={() => actions.unlockDay(selectedDay.id)}
-                        className="rounded-xl px-3 py-2 bg-bg border border-border"
-                      >
-                        <Text className="text-text font-bold">Edit Day</Text>
-                      </TouchableOpacity>
-                    ) : null}
+              {/* Quick-pick chips */}
+              <View className="flex-row flex-wrap items-center justify-center gap-2 mb-4">
+                {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+                  const picked = daysCountDraft === String(n);
+                  return (
+                    <Pressable
+                      key={n}
+                      onPress={() => setDaysCountDraft(String(n))}
+                      className={`px-3 py-2 rounded-xl ${picked ? 'bg-primary' : 'bg-bg border border-border'} ${picked ? '' : 'opacity-80'}`}
+                    >
+                      <Text className={`${picked ? 'text-onPrimary' : 'text-text'}`}>{n}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Manual input (optional) */}
+              <TextInput
+                value={daysCountDraft}
+                onChangeText={setDaysCountDraft}
+                placeholder="1-7"
+                keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}
+                className="rounded-xl px-4 py-3 mb-4 bg-bg text-text border border-border"
+                placeholderTextColor="#888888"
+                maxLength={1}
+              />
+
+              {(() => {
+                const n = parseInt(daysCountDraft, 10);
+                const valid = Number.isInteger(n) && n >= 1 && n <= 7;
+                return (
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      disabled={!valid}
+                      className={`flex-1 items-center rounded-xl px-4 py-3 ${valid ? 'bg-primary' : 'bg-card opacity-50'}`}
+                      onPress={() => {
+                        // Only apply when valid
+                        actions.upsertDayCount(n);   // important: pass a number, not a string
+                        // optional: mark dirty so hydrate won't overwrite local changes
+                        actions.markDirty?.();
+                        setAskDaysVisible(false);
+                      }}
+                    >
+                      <Text className={`${valid ? 'text-onPrimary' : 'text-text'} font-bold`}>Start</Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
-                      disabled={!canEditSelectedDay}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/categories',
-                          params: { targetDayId: String(selectedDayId) },
-                        })
-                      }
-                      className={`rounded-xl px-3 py-2 bg-primary ${canEditSelectedDay ? 'opacity-100' : 'opacity-50'}`}
+                      className="flex-1 items-center rounded-xl px-4 py-3 bg-bg border border-border"
+                      onPress={() => setAskDaysVisible(false)}
                     >
-                      <Text className="text-onPrimary font-bold">Add Exercise</Text>
+                      <Text className="text-text font-bold">Cancel</Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-
-                {selectedDay.exercises.length === 0 ? (
-                  <Text className="text-muted">No exercises for this day — tap “Add Exercise”.</Text>
-                ) : (
-                  <View className="mt-2">
-                    {selectedDay.exercises.map((ex, idx) => (
-                      <ExerciseRow
-                        key={`${ex.id}-${idx}`}
-                        index={idx}
-                        exercise={ex}
-                        sets={ex.sets ?? 1}
-                        editable={canEditSelectedDay}
-                        onInc={() => actions.incrementSets(selectedDayId, idx, +1)}
-                        onDec={() => actions.incrementSets(selectedDayId, idx, -1)}
-                        onRemove={() => removeExerciseFromSelectedDay(idx)}
-                      />
-                    ))}
-                  </View>
-                )}
-              </View>
-            )}
-          </>
-        )}
-      </ScrollView>
-
-      {/* Modal: how many days? */}
-            <Modal
-              visible={askDaysVisible}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setAskDaysVisible(false)} // Android back
-            >
-        <View className="flex-1 items-center justify-center px-6 bg-black/60">
-          <View className="w-full rounded-2xl p-5 bg-card">
-            <Text className="text-text text-center font-bold mb-4 text-lg">
-              How many days do you train per week?
-            </Text>
-
-            {/* Quick-pick chips */}
-            <View className="flex-row flex-wrap items-center justify-center gap-2 mb-4">
-              {[1, 2, 3, 4, 5, 6, 7].map((n) => {
-                const picked = daysCountDraft === String(n);
-                return (
-                  <Pressable
-                    key={n}
-                    onPress={() => setDaysCountDraft(String(n))}
-                    className={`px-3 py-2 rounded-xl ${picked ? 'bg-primary' : 'bg-bg border border-border'} ${picked ? '' : 'opacity-80'}`}
-                  >
-                    <Text className={`${picked ? 'text-onPrimary' : 'text-text'}`}>{n}</Text>
-                  </Pressable>
                 );
-              })}
+              })()}
             </View>
-
-            {/* Manual input (optional) */}
-            <TextInput
-              value={daysCountDraft}
-              onChangeText={setDaysCountDraft}
-              placeholder="1-7"
-              keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}
-              className="rounded-xl px-4 py-3 mb-4 bg-bg text-text border border-border"
-              placeholderTextColor="#888888"
-              maxLength={1}
-            />
-
-            {(() => {
-              const n = parseInt(daysCountDraft, 10);
-              const valid = Number.isInteger(n) && n >= 1 && n <= 7;
-              return (
-                <View className="flex-row gap-3">
-                  <TouchableOpacity
-                    disabled={!valid}
-                    className={`flex-1 items-center rounded-xl px-4 py-3 ${valid ? 'bg-primary' : 'bg-card opacity-50'}`}
-                    onPress={() => {
-                      // Only apply when valid
-                      actions.upsertDayCount(n);   // important: pass a number, not a string
-                      // optional: mark dirty so hydrate won't overwrite local changes
-                      actions.markDirty?.();
-                      setAskDaysVisible(false);
-                    }}
-                  >
-                    <Text className={`${valid ? 'text-onPrimary' : 'text-text'} font-bold`}>Start</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    className="flex-1 items-center rounded-xl px-4 py-3 bg-bg border border-border"
-                    onPress={() => setAskDaysVisible(false)}
-                  >
-                    <Text className="text-text font-bold">Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            })()}
           </View>
-        </View>
-      </Modal>
+        </Modal>
 
-      {/* Bottom tabs (role-aware) */}
-      <BottomTabs role={roleLevel} currentHref="/(screens)/plan" />
-    </View>
-  );
+        {/* Bottom tabs (role-aware) */}
+        <BottomTabs role={roleLevel} currentHref="/(screens)/plan" />
+      </View>
+    );
 }
 
 /** Components **/

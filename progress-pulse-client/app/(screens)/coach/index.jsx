@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from "react-native";
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import AppLogo from "../../../assets/components/ui/AppLogo";
@@ -61,6 +63,7 @@ export default function CoachScreen() {
   const [query, setQuery] = useState("");
   const [activeTab, setActiveTab] = useState("approved"); // 'approved' | 'requests'
   const [refreshing, setRefreshing] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const counts = {
     approved: subs.filter((s) => s.status === "approved").length,
@@ -68,9 +71,10 @@ export default function CoachScreen() {
   };
 
   // Load from API
-  const loadAll = useCallback(async () => {
+  const loadAll = useCallback(async (isInitial = false) => {
     try {
-      setRefreshing(true);
+      if (isInitial) setInitialLoading(true);
+      else setRefreshing(true);
       const token = await AsyncStorage.getItem("accessToken");
       if (!token) throw new Error("Missing access token");
 
@@ -87,11 +91,12 @@ export default function CoachScreen() {
       const msg = e?.payload?.message || e?.message || "Failed to load coach data";
       Alert.alert("Error", msg);
     } finally {
-      setRefreshing(false);
+      if (isInitial) setInitialLoading(false);
+      else setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { loadAll(true); }, [loadAll]);
 
   // Derived UI lists
   const subsView = useMemo(() => {
@@ -187,6 +192,24 @@ export default function CoachScreen() {
     }
   };
 
+
+  if (initialLoading) {
+    return (
+      <View className="flex-1 bg-bg">
+        <Stack.Screen
+          options={{
+            headerTitle: () => <AppLogo />,
+            headerTitleAlign: "left",
+            headerStyle: { backgroundColor: "#FDFBFA" },
+          }}
+        />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" />
+          <Text className="text-muted mt-3">Loading coach data…</Text>
+        </View>
+      </View>
+    );
+  }
   return (
     <View className="flex-1 bg-bg">
       <Stack.Screen
@@ -272,7 +295,7 @@ export default function CoachScreen() {
         <View className="h-8" />
       </ScrollView>
 
-      <BottomTabs role={30} currentHref="/(screens)/coach/subscribers" />
+      <BottomTabs role={30} currentHref="/(screens)/coach" />
     </View>
   );
 }

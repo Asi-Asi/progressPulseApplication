@@ -1,6 +1,6 @@
 // assets/components/navigation/BottomTabs.jsx
 import React, { memo, useMemo } from "react";
-import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -11,7 +11,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
  *  - items?: override tabs completely (array of {label, icon, href, badge?})
  *  - currentHref?: explicitly mark active path (screens should pass it)
  */
-function BottomTabs({ role = 20, items, currentHref = "" }) {
+function BottomTabs({ role = 20, items, currentHref = "", loading = false }) {
   const router = useRouter();
 
   const ROUTES = {
@@ -76,7 +76,21 @@ function BottomTabs({ role = 20, items, currentHref = "" }) {
         className="bg-card border-t border-border"
         style={{ paddingBottom: Platform.OS === "android" ? 11 : 15, paddingTop: 8 }}
       >
-        <View className="flex-row items-stretch justify-around">
+
+
+        {/* שכבת טעינה קטנה מעל הטאבים */}
+        {loading && (
+          <View className="absolute inset-0 items-center justify-center">
+            <ActivityIndicator size="small" />
+          </View>
+        )}
+
+          <View
+            className="flex-row items-stretch justify-around"
+            pointerEvents={loading ? "none" : "auto"}
+            style={{ opacity: loading ? 0.6 : 1 }}
+          >
+
           {tabs.map((it) => {
             const active = it.href === activeHref;
             return (
@@ -85,6 +99,7 @@ function BottomTabs({ role = 20, items, currentHref = "" }) {
                 onPress={() => router.replace(it.href)}
                 className="flex-1 items-center justify-center py-1.5"
                 activeOpacity={0.85}
+                disabled={loading}
               >
                 <View className="items-center">
                   <View className="relative">

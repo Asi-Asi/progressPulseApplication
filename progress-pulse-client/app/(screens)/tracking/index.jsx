@@ -33,6 +33,9 @@ export default function TrackWorkout() {
 
   // Auth + server models
   const [token, setToken] = useState("");
+  const [roleLevel, setRoleLevel] = useState(20);
+  const [initialLoading, setInitialLoading] = useState(true);
+
   const [planMeta, setPlanMeta] = useState(null);      // { _id, days:[{ dayNumber, exercises:[{exerciseId,sets}] }], locked? }
   const [session, setSession] = useState(null);        // current open/closed session doc
   const [maxByExercise, setMaxByExercise] = useState({}); // from /view
@@ -45,41 +48,50 @@ export default function TrackWorkout() {
   const [refreshing, setRefreshing] = useState(false);
   const [mutating, setMutating] = useState(false);   // ספינר לפעולות עדכון (הוספה/סטים)
 
-  // Load token
+     // טעינה ראשונית: token + roleLevel + plan + today's session
   useEffect(() => {
+    let mounted = true;
     (async () => {
-      const t = await AsyncStorage.getItem("accessToken");
-      setToken(t || "");
+      try {
+        setInitialLoading(true);
+        const entries = await AsyncStorage.multiGet(["accessToken", "roleLevel"]);
+        const t = entries.find(([k]) => k === "accessToken")?.[1] || "";
+        const r = Number(entries.find(([k]) => k === "roleLevel")?.[1] || 20);
+        if (!mounted) return;
+        setToken(t);
+        setRoleLevel(Number.isFinite(r) ? r : 20);
+
+        if (!t) return;
+
+        // טען פלן + סשן במקביל
+        try {
+          const [p, s] = await Promise.all([
+            getMyPlan({ token: t }).catch(() => null),
+            getTodaySession({ token: t }).catch(() => null),
+          ]);
+
+          if (!mounted) return;
+          if (p) {
+            const planId = p?._id || p?.planId || p?.id;
+            setPlanMeta(planId ? { ...p, _id: planId } : p);
+          } else {
+            setPlanMeta(null);
+          }
+
+          setSession(s || null);
+          setShowPicker(true);
+        } catch {
+          if (!mounted) return;
+          setPlanMeta(null);
+          setSession(null);
+          setShowPicker(true);
+        }
+      } finally {
+        if (mounted) setInitialLoading(false);
+      }
     })();
+    return () => { mounted = false; };
   }, []);
-
-  // Load plan + today's session when token is ready
-  useEffect(() => {
-    if (!token) return;
-    (async () => {
-      try {
-        const p = await getMyPlan({ token });
-
-        const planId = p?._id || p?.planId || p?.id;
-        setPlanMeta(planId ? { ...p, _id: planId } : p);
-
-
-
-      } catch {
-        setPlanMeta(null);
-      }
-
-      try {
-        const s = await getTodaySession({ token });
-        setSession(s || null);
-        // אם יש סשן פתוח – לא בוחרים ולא מסתירים. רק נשמור אותו ונציג כפתור Resume.
-        setShowPicker(true);
-      } catch {
-        setSession(null);
-        setShowPicker(true);
-      }
-    })();
-  }, [token]);
 
   // Build UI “days” adapter from planMeta
   const uiDays = useMemo(() => {
@@ -341,7 +353,22 @@ const addDisabled = !selectedSession || starting || mutating;
   //################################################################################################//
   //################################################################################################//
   return (
-    <View className="flex-1 bg-bg">
+        initialLoading ? (
+      <View className="flex-1 bg-bg">
+        <Stack.Screen
+          options={{
+            headerTitle: () => <AppLogo />,
+            headerTitleAlign: "left",
+            headerStyle: { backgroundColor: "#FDFBFA" },
+          }}
+        />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" />
+          <Text className="text-muted mt-3">Loading your session…</Text>
+        </View>
+      </View>
+    ) : (
+      <View className="flex-1 bg-bg">
       <Stack.Screen
         options={{
           headerTitle: () => <AppLogo />,
@@ -496,7 +523,8 @@ const addDisabled = !selectedSession || starting || mutating;
         }}  
       />
 
-      <BottomTabs role={20} currentHref="/(screens)/tracking" />
+      <BottomTabs role={roleLevel} currentHref="/(screens)/tracking" />
     </View>
+  )
   );
 }

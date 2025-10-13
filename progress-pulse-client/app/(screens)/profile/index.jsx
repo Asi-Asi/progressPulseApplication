@@ -1,8 +1,8 @@
 // app/(screens)/profile/index.jsx
 import React, { useEffect, useState, useCallback } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity, Alert, Platform, Share, KeyboardAvoidingView
-} from "react-native";
+  View, Text, ScrollView, TouchableOpacity, Alert, Platform, Share, KeyboardAvoidingView, ActivityIndicator
+} from "react-native"; // + ActivityIndicator
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter } from "expo-router";
 import AppLogo from "../../../assets/components/ui/AppLogo";
@@ -53,13 +53,13 @@ const copyText = async (text) => {
 export default function ProfileScreen() {
   const router = useRouter();
 
-  const [user, setUser] = useState(null); // from /api/users/me
-  
-  const roleLevel = user?.roleLevel ?? ROLES.TRAINEE;
-  const isCoach = roleLevel === ROLES.COACH;
+  const [user, setUser] = useState(null);                                // from /api/users/me
+  const [loading, setLoading] = useState(true);                          // <- מצב טעינה למסך כולו
 
-  // profile fields         
-  const [firstName, setFirstName] = useState("");           
+  const roleLevel = user?.roleLevel ?? ROLES.TRAINEE;                    // ברירת מחדל TRAINEE בזמן טעינה
+
+  // profile fields
+  const [firstName, setFirstName] = useState("");
   const [lastName,  setLastName]  = useState("");
   const [email,     setEmail]     = useState("");
 
@@ -76,6 +76,7 @@ export default function ProfileScreen() {
 
   /* ----- load profile + coach code ----- */
   const loadMe = useCallback(async () => {
+    setLoading(true);                                                    // ← התחלת טעינה
     try {
       const token = await AsyncStorage.getItem("accessToken");
       if (!token) throw new Error("Missing access token");
@@ -94,6 +95,8 @@ export default function ProfileScreen() {
       }
     } catch (e) {
       alertSafe("Error", e?.payload?.message || e?.message || "Failed to load profile");
+    } finally {
+      setLoading(false);                                                 // ← סיום טעינה
     }
   }, []);
 
@@ -108,7 +111,7 @@ export default function ProfileScreen() {
       const body = {
         firstName: String(firstName).trim(),
         lastName : String(lastName).trim(),
-        email    : String(email).trim().toLowerCase(), // server enforces read-only if you want
+        email    : String(email).trim().toLowerCase(),
       };
       await request("/api/users/me", { method: "PUT", token, body });
       alertSafe("Saved", "Your profile has been updated.");
@@ -208,6 +211,27 @@ export default function ProfileScreen() {
     router.replace("/(screens)/auth");
   };
 
+  /* ---------- מסך טעינה לפני שהנתונים הגיעו ---------- */
+  if (loading) {
+    return (
+      <View className="flex-1 bg-bg">
+        <Stack.Screen
+          options={{
+            headerTitle: () => <AppLogo />,
+            headerTitleAlign: "left",
+            headerStyle: { backgroundColor: "#FDFBFA" },
+          }}
+        />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" />{/* אפשר לשים לוגו/לוטי */}
+          <Text className="text-muted mt-3">Loading profile…</Text>
+        </View>
+        
+      </View>
+    );
+  }
+
+  /* ---------- התוכן הרגיל אחרי שהנתונים נטענו ---------- */
   return (
     <View className="flex-1 bg-bg">
       <Stack.Screen
@@ -257,7 +281,7 @@ export default function ProfileScreen() {
             changingPass={changingPass}
           />
 
-          {/* Role‑based section (trainee / coach / admin) */}
+          {/* Role-based section (trainee / coach / admin) */}
           <RoleBasedSection
             roleLevel={roleLevel}
             // trainee
@@ -286,7 +310,7 @@ export default function ProfileScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <BottomTabs role={roleLevel} currentHref="/(screens)/profile" />
+      <BottomTabs role={roleLevel} currentHref="/(screens)/profile" loading={loading} />
     </View>
   );
 }
