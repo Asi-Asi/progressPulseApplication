@@ -106,14 +106,11 @@ export default function TrainingHistory() {
     finally { setRefreshing(false); }
   }, [fetchHistory]);
 
-  // מיון יורד לפי תאריך (ה־API כבר מחזיר ממוין, אבל נוודא)
+  // מיון יורד לפי תאריך (הכי חדש למעלה)
   const sorted = useMemo(() => {
     return [...items].sort((a, b) => {
       const byDate = String(b.date || "").localeCompare(String(a.date || ""));
       if (byDate !== 0) return byDate;
-      const sa = b.startedAt ? new Date(b.startedAt).getTime() : 0;
-      const sb = a.startedAt ? new Date(a.startedAt).getTime() : 0;
-      return sa - sb; // גם כאן – חדש קודם
     });
   }, [items]);
 
@@ -125,7 +122,7 @@ export default function TrainingHistory() {
       const full = isCoachView
       ? await getTraineeWorkout({ token, traineeId, workoutId })
       : await getWorkoutById({ token, workoutId });
-      // התאמות קטנות ל־UI:
+      
       // session.status === 'closed', session.planDay, session.exercises: [{exerciseId, sets:[{setNumber,reps,weight}]}]
       const entries = (full?.exercises || []).map(e => {
         const id = String(e.exerciseId);
