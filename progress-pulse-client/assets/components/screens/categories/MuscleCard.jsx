@@ -12,7 +12,7 @@ function MuscleCardBase({ item, onPress, count = 0 }) {
       activeOpacity={0.85}
       onPress={() => onPress(item)}
     >
-      {/* Bigger icon chip (from 44→56) */}
+      
       <View
         className="w-14 h-14 rounded-2xl items-center justify-center mb-3"
         style={{ backgroundColor: '#007BFF1A' }}

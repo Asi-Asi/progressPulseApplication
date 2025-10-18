@@ -136,14 +136,14 @@ export default function TrackWorkout() {
     finally { setRefreshing(false); }
   }
 
+
+
   async function onStartSessionForDay(dayNumber) {
     if (!token) return safeAlert("Missing token");
     const planId = planMeta?._id || planMeta?.planId || planMeta?.id;
     if (!planId) return safeAlert("Missing plan", "Finish your plan first.");
     try {
       setStarting(true);
-     // לא מסתירים לפני שהכול הצליח; נשאיר גלוי עד שנפתח סשן בהצלחה
-     // אם יש סשן פתוח ליום אחר – לזרוק אותו לפני שפותחים חדש
       if (
         session &&
         session.status === "open" &&
@@ -158,7 +158,7 @@ export default function TrackWorkout() {
       await refreshView(s._id);
 
       setSelectedDayId(String(dayNumber));
-      // עכשיו אפשר להסתיר את ה-picker
+      // הסתרת ה-picker
       setShowPicker(false);
 
     } catch (e) {
@@ -170,6 +170,10 @@ export default function TrackWorkout() {
     }
     
   }
+
+
+
+
 
   async function onAddExercise(exerciseId) {
   const target = selectedSession || session; // ננסה קודם את המתאים ליום
@@ -353,7 +357,7 @@ const addDisabled = !selectedSession || starting || mutating;
   //################################################################################################//
   //################################################################################################//
   return (
-        initialLoading ? (
+    initialLoading ? (
       <View className="flex-1 bg-bg">
         <Stack.Screen
           options={{

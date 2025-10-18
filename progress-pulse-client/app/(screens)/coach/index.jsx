@@ -80,8 +80,8 @@ export default function CoachScreen() {
 
       const [codeResp, reqResp, subResp] = await Promise.all([
         getCoachCode({ token }),
-        listJoinRequests({ token, limit: 50, skip: 0 }),
-        apiListSubscribers({ token, limit: 50, skip: 0 }),
+        listJoinRequests({ token, limit: 20, skip: 0 }),
+        apiListSubscribers({ token, limit: 20, skip: 0 }),
       ]);
 
       setCoachCode(codeResp?.code ?? null);
