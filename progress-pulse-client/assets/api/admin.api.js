@@ -53,3 +53,42 @@ export async function adminDeleteUser(id) {
   // server: DELETE /api/users/:id (admin only)
   return await request(`/api/users/${id}`, { method: "DELETE" });
 }
+
+
+
+export async function adminCreateUser({ firstName, lastName, email, password, gender, roleLevel }) {
+  // שלב 1: יצירה דרך register (לא דורש שינוי שרת)
+  const regResp = await request("/api/users/register", {
+    method: "POST",
+    body: { firstName, lastName, email, password, gender },
+  });
+
+  // ננסה לחלץ את המשתמש שחזר מהריספונס (מגנים על כל הצורות הנפוצות)
+  const created =
+    regResp?.user ||
+    regResp?.createdUser ||
+    regResp ||
+    null;
+
+  const createdId = String(
+    created?._id ||
+    created?.id ||
+    regResp?.id ||
+    regResp?.insertedId ||
+    ""
+  );
+
+  // שלב 2 (אופציונלי): שינוי תפקיד אם התבקש, ורק אם יש לנו מזהה
+  if (createdId && typeof roleLevel === "number" && roleLevel !== 20) {
+    try {
+      await adminUpdateUser(createdId, { roleLevel });
+      created.roleLevel = roleLevel; // סנכרון אופטימי לאובייקט המוחזר
+    } catch (e) {
+      // אם שינוי התפקיד נכשל – עדיין נחזיר את המשתמש שנוצר
+      console.warn("adminCreateUser: role update failed:", e?.message);
+    }
+  }
+
+  return created;
+}
+
