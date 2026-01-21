@@ -24,3 +24,79 @@ Content-Type: application/json
 }
 
 ###
+
+POST https://progresspulseapplication.onrender.com/api/users/register
+Content-Type: application/json
+
+{
+  "firstName": "demo",
+  "lastName": "user",
+  "email": "test701@example.com",
+  "password": "securepassword",
+  "gender": "male"
+}
+###
+
+
+POST https://progresspulseapplication.onrender.com/api/users/login
+Content-Type: application/json
+
+{
+  "email": "demo+62@example.com",
+  "password": "newsecurepassword"
+}
+
+###
+
+POST https://progresspulseapplication.onrender.com/api/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "123123"
+}
+
+
+
+###
+PUT https://progresspulseapplication.onrender.com/api/users/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MzQyMjEsImV4cCI6MTc1ODYzNTEyMX0.ohDjoSoWsiwba-UMQCXP2wyyU2Q-TessO0I3gAuigvs
+Content-Type: application/json
+
+{
+  "firstName": "Demo",
+  "lastName": "User",
+  "phone": "050-1234567"
+}
+
+
+###
+
+GET https://progresspulseapplication.onrender.com/api/users/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MzQyMjEsImV4cCI6MTc1ODYzNTEyMX0.ohDjoSoWsiwba-UMQCXP2wyyU2Q-TessO0I3gAuigvs
+
+
+###
+PUT https://progresspulseapplication.onrender.com/api/users/me
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MzQyMjEsImV4cCI6MTc1ODYzNTEyMX0.ohDjoSoWsiwba-UMQCXP2wyyU2Q-TessO0I3gAuigvs
+
+
+{
+  "firstName": "Demo",
+  "lastName": "User",
+  "gender": "male",
+  "email": "demo+62@example.com"
+}
+
+###
+
+PUT https://progresspulseapplication.onrender.com/api/users/me/password
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2MjI0OTEsImV4cCI6MTc1ODYyMzM5MX0._GlvY_Pq-a_r3dzc5pGXqabxZuvjVXIkosC6hyW13Ms
+
+{
+  "currentPassword": "securepassword",
+  "newPassword": "newsecurepassword"
+}
+
+###

@@ -1,43 +1,31 @@
-import bcrypt from 'bcrypt';
-import { createUser, getAll, getByEmail, deleteById } from "./users.db.js";
-import { formatInTimeZone } from 'date-fns-tz';                             
+import { createUser, getAll, getByEmail, deleteById, updateById, getById } from "./users.db.js";
+import { Roles } from '../auth/roles.js';
 
 
 
-// helpers functions
-function toYMD(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function normalizeBirthDate(bd) { 
-  if (!bd) return null;
-  if (bd instanceof Date && !isNaN(bd)) return toYMD(bd);
-  if (typeof bd === 'string') {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(bd)) return bd;     
-    const d = new Date(bd);
-    if (!isNaN(d)) return toYMD(d);
-  }
-  return null;
-}
-function toLocal(d) {
-  return formatInTimeZone(d, 'Asia/Jerusalem', 'yyyy-MM-dd HH:mm:ss');
+function nowLocalISO(tz = 'Asia/Jerusalem') {
+    const d = new Date();
+    const local = new Date(d.toLocaleString('en-US', { timeZone: tz }));
+    const pad = n => String(n).padStart(2, '0');
+    const yyyy = local.getFullYear();
+    const mm   = pad(local.getMonth()+1);
+    const dd   = pad(local.getDate());
+    const HH   = pad(local.getHours());
+    const MM   = pad(local.getMinutes());
+    const SS   = pad(local.getSeconds());
+    // בלי אופסט; מציין את ה‑tz בשדה נפרד
+    return `${yyyy}-${mm}-${dd} ==> T ${HH}:${MM}:${SS}`;
 }
 
 export default class User{
-    constructor({ firstName, lastName, name, birthDate, sex, phone, email, password, roleLevel }) {
+    constructor({ firstName, lastName, gender, email, password, roleLevel }) {
     this.firstName = firstName?.trim() || '';
     this.lastName  = lastName?.trim()  || '';
-    this.fullName  = (name?.trim() || `${this.firstName} ${this.lastName}`).trim();
-    this.birthDate = normalizeBirthDate(birthDate);
-    this.sex       = sex || '';
-    this.phone     = phone?.trim() || '';
+    this.gender    = gender || '';
     this.email     = email?.trim().toLowerCase();
-    this.password  = bcrypt.hashSync(password, 10); // 10 מספיק ומהיר
-    this.roleLevel = roleLevel ?? 'USER';
-    this.createdAt = toLocal(new Date());
+    this.password  =  password; // 10 מספיק ומהיר
+    this.roleLevel = roleLevel ?? Roles. TRAINEE;
+    this.createdAt = nowLocalISO('Asia/Jerusalem');
     }
 
     static async getAllUsers() {
@@ -54,9 +42,22 @@ export default class User{
     catch (error) { console.error('Error fetching user by email:', error); throw error; }
     }
 
+    static async updateById(id, data) {
+        return await updateById(id, data);
+    }
 
     static async deleteById(id) {
-         return await deleteById(id);
+      return await deleteById(id);
+    }
+
+    static async findById(id) {
+        try {
+            const user = await getById(id);
+            return user;
+        } catch (error) {
+            console.error('Error fetching user by id:', error);
+            throw error;
+        }
     }
 
     async save(){

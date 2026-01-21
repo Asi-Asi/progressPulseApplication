@@ -15,11 +15,10 @@ export async function getAll(){
     }
     
     finally {
-        if (client) {
-            client.close();
-        }
+      if (client) await client.close();
     }
 }
+
 
 
 // Create a new user
@@ -28,7 +27,9 @@ export async function createUser(user) {
   try {
     client = await MongoClient.connect(process.env.CONNECTION_STRING);
     const db = client.db(process.env.DB_NAME);
-    const result = await db.collection('Users').insertOne(user);
+    const usersCol = db.collection('Users');
+
+    const result = await usersCol.insertOne(user);
 
     // החזר את המסמך שנשמר + ה-_id החדש
     return { ...user, _id: result.insertedId };
@@ -41,7 +42,7 @@ export async function createUser(user) {
     console.error('Error creating user:', error);
     throw error;
   } finally {
-    if (client) client.close();
+    if (client) await client.close();
   }
 }
 
@@ -57,10 +58,26 @@ export async function getByEmail(email) {
     console.error('Error fetching user by email:', error);
     throw error;
   } finally {
-    if (client) client.close();
+    if (client) await client.close();
   }
 }
 
+export async function updateById(id, data) {
+  let client = null;
+  try {
+    client = await MongoClient.connect(process.env.CONNECTION_STRING);
+    const db = client.db(process.env.DB_NAME);
+    return await db.collection('Users').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: data }
+    );
+  } catch (error) {
+    console.error('Error updating user by id:', error);
+    throw error;
+  } finally {
+    if (client) await client.close();
+  }
+}
 
 
 export async function deleteById(id) {
@@ -73,6 +90,21 @@ export async function deleteById(id) {
     console.error('Error deleting user by id:', error);
     throw error;
   }finally {
-    if (client) client.close();
+    if (client) await client.close();
+  }
+}
+
+
+export async function getById(id) {
+  let client = null;
+  try {
+    client = await MongoClient.connect(process.env.CONNECTION_STRING);
+    const db = client.db(process.env.DB_NAME);
+    return await db.collection('Users').findOne({ _id: new ObjectId(id) });
+  } catch (error) {
+    console.error('Error fetching user by id:', error);
+    throw error;
+  } finally {
+    if (client) await client.close();
   }
 }

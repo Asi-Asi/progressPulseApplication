@@ -1,0 +1,172 @@
+@host = https://progresspulseapplication.onrender.com
+
+# הדבק כאן את ה-JWT של המתאמן אחרי התחברות (כולל הקידומת "Bearer ")
+@traineeToken = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjIwLCJlbWFpbCI6ImRlbW8rNjJAZXhhbXBsZS5jb20iLCJpYXQiOjE3NTg4NTEwMzYsImV4cCI6MTc1ODg1MTkzNn0.HPA4BNwIrU1sTCp4tZ7Gp4p1AW3rGE2qfINFRfwusW0
+# הדבק כאן את ה-JWT של המאמן אחרי התחברות (כולל הקידומת "Bearer ")
+@coachToken = Bearer   eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQ1MWU0NTZhNjE3ZDc5MmViYWQ2M2EiLCJybHYiOjMwLCJlbWFpbCI6InRlc3Q3MDFAZXhhbXBsZS5jb20iLCJpYXQiOjE3NTg4NTEwNjcsImV4cCI6MTc1ODg1MTk2N30.KKM3D7aJCclxH6Y5O3KyTQ3V6evc8x7TqhwRXauODKQ
+
+# הגדר אחרי POST /api/coach/code/new או GET /api/coach/code
+@coachCode = HJH5T7D
+
+# הגדר אחרי GET /api/coach/requests (items[0]._id) או אחרי יצירת בקשה
+@linkId = 68d5f1abe1d3888fe2d61a5c
+
+# הגדר אחרי GET /api/coach/subscribers (items[0].traineeId)
+@traineeId = 68d25f9242b5ba424b71d361
+
+# הגדר אחרי GET /api/coach/trainees/{{traineeId}}/history (items[0]._id)
+@workoutId = 68d3eb4c34f33055b6ac94d7
+
+
+############################################################
+# 0) התחברות כמתאמן (Trainee) – קבל JWT לשים ב-@traineeToken
+############################################################
+POST {{host}}/api/users/login
+Content-Type: application/json
+
+{
+    "email": "demo+62@example.com",
+    "password": "newsecurepassword"
+}
+
+###
+# לאחר התחברות: העתק את accessToken מהתגובה ושבץ ל-@traineeToken למעלה (עם הקידומת Bearer).
+
+
+############################################################
+# 0b) התחברות כמאמן (Coach) – קבל JWT לשים ב-@coachToken
+############################################################
+POST {{host}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "test701@example.com",
+  "password": "securepassword"
+}
+
+###
+# לאחר התחברות: העתק את accessToken מהתגובה ושבץ ל-@coachToken למעלה (עם הקידומת Bearer).
+
+
+############################################################
+# 1) (מאמן) שליפת קוד הצטרפות נוכחי
+############################################################
+GET {{host}}/api/coach/code
+Authorization: {{coachToken}}
+
+###
+# אם הקוד null – המשך ליצירת קוד חדש.
+
+
+############################################################
+# 2) (מאמן) יצירת/רענון קוד הצטרפות חדש
+############################################################
+POST {{host}}/api/coach/code/new
+Authorization: {{coachToken}}
+
+###
+# העתק את הערך של code מהתגובה ושבץ ל-@coachCode למעלה.
+
+
+############################################################
+# 3) (מתאמן) שליחת בקשת הצטרפות לפי קוד המאמן
+############################################################
+POST {{host}}/api/coach/join
+Authorization: {{traineeToken}}
+Content-Type: application/json
+
+{
+  "code": "{{coachCode}}"
+}
+
+###
+# צפה ל-202 Accepted. ניתן יהיה לראות את הבקשה אצל המאמן ב-/requests.
+# אפשר לקחת את request._id ולהדביק ל-@linkId למעלה.
+
+
+############################################################
+# 4) (מאמן) רשימת בקשות ממתינות
+############################################################
+GET {{host}}/api/coach/requests
+Authorization: {{coachToken}}
+
+###
+# קח items[0]._id והדבק ל-@linkId למעלה כדי לאשר/לדחות.
+
+
+############################################################
+# 5) (מאמן) אישור בקשת הצטרפות (linkId מהשלב הקודם)
+############################################################
+PUT {{host}}/api/coach/requests/{{linkId}}/approve
+Authorization: {{coachToken}}
+
+###
+# צפה ל-200 OK. המדיניות “מאמן אחד פעיל לכל מתאמן” נאכפת בצד שרת.
+
+
+############################################################
+# 5a) (מאמן) דחיית בקשה (אופציונלי)
+############################################################
+PUT {{host}}/api/coach/requests/{{linkId}}/reject
+Authorization: {{coachToken}}
+
+###
+# 200 אם נדחתה או 404 אם לא נמצאה/לא pending.
+
+
+############################################################
+# 6) (מאמן) רשימת מנויים מאושרים (Approved)
+############################################################
+GET {{host}}/api/coach/subscribers
+Authorization: {{coachToken}}
+
+###
+# קח items[0]._id כ-activeLinkId (לא חובה כאן) ו-items[0].traineeId והדבק ל-@traineeId למעלה.
+
+
+############################################################
+# 7) (מתאמן) סטטוס המאמן שלי (none/approved)
+############################################################
+GET {{host}}/api/coach/my-coach
+Authorization: {{traineeToken}}
+
+
+############################################################
+# 8) (מאמן) היסטוריית אימונים של המתאמן (קריאה בלבד)
+############################################################
+GET {{host}}/api/coach/trainees/{{traineeId}}/history?limit=20&skip=0
+Authorization: {{coachToken}}
+
+###
+# אם יש פריטים, העתק items[0]._id והדבק ל-@workoutId למעלה.
+
+
+############################################################
+# 9) (מאמן) פרטי אימון בודד של מתאמן (קריאה בלבד)
+############################################################
+GET {{host}}/api/coach/trainees/{{traineeId}}/workouts/{{workoutId}}
+Authorization: {{coachToken}}
+
+###
+# צפה ל-200 אם האימון קיים ושייך למתאמן; 404 אם לא קיים; 403 אם אין קשר מאושר.
+
+
+############################################################
+# 10) (מאמן) ביטול מנוי מאושר (Revoked) – לפי linkId של מנוי פעיל
+############################################################
+# שים כאן את ה-id של קשר מאושר מהרשימה ב-/subscribers
+DELETE {{host}}/api/coach/subscribers/{{linkId}}
+Authorization: {{coachToken}}
+
+###
+# צפה ל-200 אם בוטל, 404 אם לא נמצא/לא פעיל.
+
+
+############################################################
+# 11) (מתאמן) התנתקות מהמאמן שלי (אם יש מאמן פעיל)
+############################################################
+DELETE {{host}}/api/coach/my-coach
+Authorization: {{traineeToken}}
+
+###
+# צפה ל-200 אם בוצע, 409 אם לא היה מאמן פעיל.

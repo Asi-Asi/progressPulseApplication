@@ -1,0 +1,27 @@
+GET https://progresspulseapplication.onrender.com/api/exercises?muscle=Back&limit=10
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2NjkxNzgsImV4cCI6MTc1ODY3MDA3OH0.Drb3IT55JBe6CrQIPDJRP22_NNvGJ1XvwXvic9XFGuk
+
+###
+GET https://progresspulseapplication.onrender.com/api/exercises?query=lat
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQyNWY5MjQyYjViYTQyNGI3MWQzNjEiLCJybHYiOjEwLCJpYXQiOjE3NTg2NzA2ODgsImV4cCI6MTc1ODY3MTU4OH0._m3lUmHkiGhaw11943zlItzwIMirFfd3VDxTsJvb3Hg
+
+
+
+###
+
+POST https://progresspulseapplication.onrender.com/api/exercises
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxNDMxMGFhYTRhM2EwMTcxYjUiLCJybHYiOjEwLCJpYXQiOjE3NTg3MDU2MTEsImV4cCI6MTc1ODcwNjUxMX0.W7NAsH-LMO7fnkH5fW_qi4FEco6kXPZS7gOpRWzEIks
+
+{
+  "name": "Cable Crossover",
+  "muscle": "Chest",
+  "type": "Isolation",
+  "equipment": "Cable"
+}
+
+
+
+### מחיקה עם אדמין
+DELETE https://progresspulseapplication.onrender.com/api/exercises/68d33b52bc744db4006d224d
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQzMzIxNDMxMGFhYTRhM2EwMTcxYjUiLCJybHYiOjEwLCJpYXQiOjE3NTg3MDU2MTEsImV4cCI6MTc1ODcwNjUxMX0.W7NAsH-LMO7fnkH5fW_qi4FEco6kXPZS7gOpRWzEIks

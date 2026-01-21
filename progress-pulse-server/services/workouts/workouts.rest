@@ -1,0 +1,181 @@
+@host = https://progresspulseapplication.onrender.com
+# Paste your JWT after login (keep the "Bearer " prefix)
+@token = Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OGQ2YTgzZTJlMmFiOGYzMjAwNTA5ZDMiLCJybHYiOjIwLCJlbWFpbCI6ImFobWFkQGNvbm5lY3QuY29tIiwiaWF0IjoxNzU5MTk5Mjg4LCJleHAiOjE3NTkyMDAxODh9.r15FRpmxEG3t2ipo9HS_hGGw6Hh2vTTcUmAiuKEZ5l4
+
+# Set after POST /api/workouts/sessions (value of _id in response)
+@sessionId = 68db3d0e5ca3569151629eed
+
+# Set from the plan's day you chose (or from the /view response)
+@exerciseId = 68d323efcfbe22f2c15df948
+
+############################################################
+# 0) Login (get a JWT)
+############################################################
+POST {{host}}/api/users/login
+Content-Type: application/json
+
+{
+  "email": "ahmad@connect.com",
+  "password": "123456"
+}
+
+###
+# After login: copy the token from the response and paste it into @token above.
+
+
+############################################################
+# 1) Get the current user's plan (to grab the planId and exercise ids)
+############################################################
+GET {{host}}/api/plans/me
+Authorization: {{token}}
+
+###
+# Copy the "_id" into @planId above.
+# Pick a dayNumber and an exerciseId from the response.
+
+
+############################################################
+# 2) Open today's session from plan day
+############################################################
+# POST {{host}}/api/workouts/sessions
+# Authorization: {{token}}
+# Content-Type: application/json
+
+# {
+#   "fromPlanId": "{{planId}}",
+#   "planDay": 2
+# }
+
+###
+# Copy the returned "_id" into @sessionId above.
+
+
+############################################################
+# 3) Get session view (planned + maxByExercise)
+############################################################
+GET {{host}}/api/workouts/sessions/{{sessionId}}/view
+Authorization: {{token}}
+
+###
+# Confirm planned shows your chosen exercise.
+# If @exerciseId not set yet, copy one exerciseId from "planned" here into @exerciseId above.
+
+
+############################################################
+# 4) (Optional) Get today's open session quickly
+############################################################
+GET {{host}}/api/workouts/sessions/today
+Authorization: {{token}}
+
+
+############################################################
+# 5) Add exercise to the session (so we can track sets)
+############################################################
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises
+Authorization: {{token}}
+Content-Type: application/json
+
+{ "exerciseId": "{{exerciseId}}" }
+
+###
+# Idempotent: running again won't duplicate.
+
+
+############################################################
+# 6) Add a set (live save)
+############################################################
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets
+Authorization: {{token}}
+Content-Type: application/json
+
+{ "reps": 10, "weight": 40 }
+
+
+############################################################
+# 7) Update set #1 (live)
+############################################################
+PUT {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets/1
+Authorization: {{token}}
+Content-Type: application/json
+
+{ "reps": 8, "weight": 45 }
+
+
+############################################################
+# 8) Delete set #1 (live)
+############################################################
+DELETE {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets/1
+Authorization: {{token}}
+
+
+
+############################################################
+# Remove an exercise from an open session
+############################################################
+# (if you added it by mistake, or changed your mind)
+DELETE https://progresspulseapplication.onrender.com/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}
+Authorization: {{token}}
+
+
+
+############################################################
+# 8a) Verify it's gone from the session view
+############################################################
+# Verify it’s gone
+GET https://progresspulseapplication.onrender.com/api/workouts/sessions/{{sessionId}}/view
+Authorization: {{token}}
+
+
+############################################################
+# 9) Add again and then close session (Finish Workout)
+############################################################
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets
+Authorization: {{token}}
+Content-Type: application/json
+
+{ "reps": 10, "weight": 40 }
+
+###
+POST {{host}}/api/workouts/sessions/{{sessionId}}/close
+Authorization: {{token}}
+
+
+############################################################
+# 10) Negative test: try to add after close (expect 409)
+############################################################
+POST {{host}}/api/workouts/sessions/{{sessionId}}/exercises/{{exerciseId}}/sets
+Authorization: {{token}}
+Content-Type: application/json
+
+{ "reps": 5, "weight": 20 }
+
+
+############################################################
+# 11) My history (paging + optional date filters)
+############################################################
+GET {{host}}/api/workouts/history?limit=20&skip=0&from=2025-09-01&to=2025-09-30
+Authorization: {{token}}
+
+
+############################################################
+# 12) Single closed workout by id (use the same sessionId if you closed it)
+############################################################
+GET {{host}}/api/workouts/history/{{sessionId}}
+Authorization: {{token}}
+
+
+
+###
+
+
+POST {{host}}/api/workouts/sessions/68daa2d87bf32a5d286f83e0/discard
+Authorization: {{token}}
+
+
+###
+
+PUT {{host}}/api/workouts/sessions/{sessionId}/exercises/{exerciseId}/sets/1
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "reps": 10, "weight": 15 }

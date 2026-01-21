@@ -1,0 +1,123 @@
+// assets/api/workouts.api.js
+import { API_URL } from "./client";
+
+const parse = async (res) => {
+  const txt = await res.text();
+  const data = txt ? (() => { try { return JSON.parse(txt); } catch { return txt; } })() : null;
+  if (!res.ok) {
+    const err = new Error((data && data.message) || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.payload = typeof data === "string" ? { raw: data } : data;
+    throw err;
+  }
+  return data;
+};
+
+export function getTodaySession({ token }) {
+  return fetch(`${API_URL}/api/workouts/sessions/today`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+export function createSession({ token, fromPlanId, planDay }) {
+  return fetch(`${API_URL}/api/workouts/sessions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ fromPlanId, planDay }),
+  }).then(parse);
+}
+export function getSessionView({ token, sessionId }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/view`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+export function addExercise({ token, sessionId, exerciseId }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ exerciseId }),
+  }).then(parse);
+}
+export function removeExercise({ token, sessionId, exerciseId }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises/${exerciseId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+export function addSet({ token, sessionId, exerciseId, reps, weight }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reps, weight }),
+  }).then(parse);
+}
+export function updateSet({ token, sessionId, exerciseId, setNumber, reps, weight }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets/${setNumber}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reps, weight }),
+  }).then(parse);
+}
+export function removeSet({ token, sessionId, exerciseId, setNumber }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/exercises/${exerciseId}/sets/${setNumber}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+
+export async function discardSession({ token, sessionId }) {
+  const res = await fetch(`${API_URL}/api/workouts/sessions/${sessionId}/discard`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  // שרת מחזיר 204 No Content כשהצליח — זה תקין
+  if (res.status === 204) return true;
+
+  // אם חזר משהו אחר ולא ok — נזרוק הודעת שגיאה קריאה
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const t = await res.text();
+      if (t) {
+        const j = JSON.parse(t);
+        if (j?.message) msg = j.message;
+      }
+    } catch {}
+    throw new Error(msg);
+  }
+  return true;
+}
+
+
+export function closeSession({ token, sessionId }) {
+  return fetch(`${API_URL}/api/workouts/sessions/${sessionId}/close`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+
+
+
+
+// ################################################################################################################################//
+// ################################################################################################################################//
+// ################################################################################################################################//
+// ==================================== History ====================================//
+
+export function listHistory({ token, from, to, skip = 0, limit = 50 }) {
+  const params = new URLSearchParams();
+  if (from) params.append("from", from);
+  if (to)   params.append("to", to);
+  params.append("skip", String(skip));
+  params.append("limit", String(limit));
+
+  return fetch(`${API_URL}/api/workouts/history?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}
+
+export function getWorkoutById({ token, workoutId }) {
+  return fetch(`${API_URL}/api/workouts/history/${workoutId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(parse);
+}

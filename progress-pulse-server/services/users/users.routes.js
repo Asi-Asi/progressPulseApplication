@@ -1,12 +1,58 @@
 import {Router} from 'express';
-import {getAllUsers, addUser, login, deleteUserById} from './users.controller.js';
+import {getAllUsers, login, register, deleteUserById,updateUserById, getMe, updateMe, changeMyPassword} from './users.controller.js';
+import { requireAuth, requireAdmin } from '../auth/auth.middleware.js'; // ← use requireAdmin
+import { ObjectId } from 'mongodb';
+
+
+
+
 const usersRouter = Router();
 
+//helper functions
+function rejectNoSqlKeys(obj) {
+    for (const k of Object.keys(obj || {})) {
+        if (k.startsWith('$')) throw new Error('Illegal key');
+        if (obj[k] && typeof obj[k] === 'object') rejectNoSqlKeys(obj[k]);
+    }
+}
+
+function mustBeObjectId(req, res, next) {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid id' });
+    next();
+}
+
+function validateUpdateBody(req, res, next) {
+    try {
+        rejectNoSqlKeys(req.body);
+        next();
+    } catch {
+    res.status(400).json({ message: 'Invalid input' });
+    }
+}
+//End helper functions
+
+
+
+// Routes
 usersRouter
-    .get('/', getAllUsers)
-    .post('/register', addUser)
+    .post('/register', register)
     .post('/login', login)
-    .delete('/:id', deleteUserById);
+    
+
+    
+    //profile routes
+    .get('/me', requireAuth, getMe)
+    .put('/me', requireAuth, updateMe)
+    .put('/me/password', requireAuth, changeMyPassword)
+    
+    
+    // Admin routes
+    .get('/',  requireAuth , requireAdmin,getAllUsers)
+    .put('/:id', requireAuth, requireAdmin, mustBeObjectId, validateUpdateBody, updateUserById)
+    .delete('/:id', requireAuth, requireAdmin, mustBeObjectId, deleteUserById)
 
 
 export default usersRouter;
+
+
